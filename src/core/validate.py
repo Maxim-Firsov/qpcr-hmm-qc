@@ -44,6 +44,7 @@ def validate_rows(rows: Iterable[dict], min_cycles: int = 25) -> tuple[list[dict
     min_cycle_failures = set()
     order_failures = set()
     for key, cycles in grouped_cycles.items():
+        # Cycle-level checks are applied per well-target trajectory.
         if len(cycles) < min_cycles:
             min_cycle_failures.add(key)
         if sorted(cycles) != cycles or len(set(cycles)) != len(cycles):

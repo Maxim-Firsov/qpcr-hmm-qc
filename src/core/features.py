@@ -15,6 +15,7 @@ def build_features(rows: Iterable[dict]) -> list[dict]:
     out: list[dict] = []
     for key, group in grouped.items():
         ordered = sorted(group, key=lambda r: r["cycle"])
+        # Baseline anchoring keeps fluorescence transforms stable across wells.
         baseline = min(r["fluorescence"] for r in ordered)
         prev_df = 0.0
         prev_f = None

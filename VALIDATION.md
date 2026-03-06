@@ -1,6 +1,6 @@
 # VALIDATION
 
-Gate completed: `Q6` on 2026-03-06 UTC.
+This document records the validation dataset design, metrics, and current limitations.
 
 ## 1. Dataset Provenance and Snapshot Date
 

@@ -17,6 +17,7 @@ DEFAULT_MODEL_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "mo
 def load_model_config(path: str | Path | None = None) -> dict:
     config_path = Path(path) if path else DEFAULT_MODEL_CONFIG_PATH
     text = config_path.read_text(encoding="utf-8")
+    # Lightweight parser keeps runtime dependency-free while the config schema is simple.
     lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("#")]
     exp_df_threshold = None
     plateau_df_threshold = None

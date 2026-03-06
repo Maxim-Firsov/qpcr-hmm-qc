@@ -18,4 +18,4 @@ qpcr-hmm-qc = "src.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q -p no:cacheprovider"
+addopts = "-q -p no:cacheprovider --basetemp=.pytest_tmp"

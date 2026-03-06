@@ -85,6 +85,7 @@ def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
             if _local_name(data_node.tag) != "data":
                 continue
             total_data_nodes += 1
+            # RDML exports can vary by vendor, so common attribute aliases are accepted.
             cycle_value = _extract_value(data_node, "cyc", "cycle")
             fluor_value = _extract_value(data_node, "fluor", "fluorescence")
             if not cycle_value or not fluor_value:

@@ -90,6 +90,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     rdml_arg = getattr(args, "rdml", None)
     curve_csv_arg = getattr(args, "curve_csv", None)
     if rdml_arg:
+        # RDML mode can process a single file or an entire directory in one run.
         rdml_path = Path(rdml_arg)
         rdml_files = sorted(rdml_path.glob("*.rdml")) if rdml_path.is_dir() else [rdml_path]
         raw: list[dict] = []
@@ -113,6 +114,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     for row in well_calls:
         if row["qc_status"] != "rerun":
             continue
+        # Rerun manifest keeps a compact reason string for downstream triage and audit records.
         flags = json.loads(row["qc_flags"])
         rerun_manifest.append(
             {
@@ -148,6 +150,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "rejected_rows": len(rejected),
         },
         "model_config": {"name": "model_v1", "hash": model_config["sha256"]},
+        # Validation summary is preserved in metadata so rejected-row reasons remain traceable.
         "data_validation_summary": validation_summary,
         "timing_seconds": 0.0,
         "warnings": [],

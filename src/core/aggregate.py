@@ -19,6 +19,7 @@ def summarize_plates(well_calls: Iterable[dict]) -> dict:
         ntc_contam = 0
         replicate_discordance = 0
         for call in calls:
+            # Flag totals are surfaced for report-level rerun rationale.
             flags = json.loads(call["qc_flags"])
             ntc_contam += int("ntc_contamination" in flags)
             replicate_discordance += int("replicate_discordance" in flags)

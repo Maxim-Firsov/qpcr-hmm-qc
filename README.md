@@ -1,30 +1,70 @@
 # qpcr-hmm-qc
 
-Deterministic qPCR QC scaffold with HMM-style state inference and auditable outputs.
+`qpcr-hmm-qc` is a deterministic quality-control pipeline for qPCR amplification curves.
+It ingests RDML or canonical curve CSV, performs HMM-style state calling, applies QC rules
+(including NTC contamination and replicate discordance checks), and emits auditable outputs.
 
-## Quick Start
+## Features
+
+- RDML and canonical CSV input support
+- Deterministic state inference with locked model configuration
+- Well-level QC flags and rerun recommendations
+- Plate-level summary and HTML report generation
+- Unit, integration, and contract tests
+
+## Repository Layout
+
+- `src/` pipeline implementation
+- `tests/` unit, integration, and output-contract tests
+- `data/raw/` RDML fixtures and manifest
+- `data/fixtures/` synthetic QC validation fixture set
+- `docs/` architecture, IO contract, and source provenance
+
+## Installation
+
+```powershell
+python -m pip install -e .
+```
+
+## Usage
+
+Run on RDML input:
+
+```powershell
+python -m src.cli --rdml data\raw --outdir outputs\run_rdml --min-cycles 1
+```
+
+Run on canonical CSV input:
+
+```powershell
+python -m src.cli --curve-csv data\fixtures\q4_curves.csv --plate-meta-csv data\fixtures\q4_plate_meta.csv --outdir outputs\run_csv --min-cycles 3
+```
+
+## Outputs
+
+Each run writes:
+
+- `well_calls.csv`
+- `rerun_manifest.csv`
+- `plate_qc_summary.json`
+- `run_metadata.json`
+- `report.html`
+
+Schema expectations are documented in `docs/io_contract.md` and enforced in `tests/contract/test_output_contract.py`.
+
+## Quality Checks
 
 ```powershell
 python -m pytest
 powershell -ExecutionPolicy Bypass -File scripts\deep_sweep.ps1
 ```
 
-Run CSV-mode pipeline:
+## Validation and Benchmarks
 
-```powershell
-python -m src.cli --curve-csv path\to\curves.csv --outdir outputs\run1 --min-cycles 3
-```
+- Benchmark summary: `RESULTS.md`
+- Validation protocol and limits: `VALIDATION.md`
+- Data provenance snapshot: `docs/data_sources.md`
 
-## Build Governance
+## License
 
-- Agent operating contract: `AGENTS.md`
-- End-to-end stage gates: `docs/BUILD_TO_FINISH.md`
-- Gate decisions: `docs/stage_gate_log.md`
-
-## Git Quality Integration
-
-Enable local pre-push checks:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup_git_hooks.ps1
-```
+MIT. See `LICENSE`.

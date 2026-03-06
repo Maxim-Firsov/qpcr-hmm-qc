@@ -1,6 +1,6 @@
 # RESULTS
 
-Gate completed: `Q6` on 2026-03-06 UTC.
+This document summarizes reproducibility and runtime measurements for the current repository baseline.
 
 ## 1. Benchmark Environment
 
