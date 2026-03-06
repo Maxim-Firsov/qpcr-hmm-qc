@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -52,6 +53,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--outdir", required=True, help="Output directory.")
     parser.add_argument("--min-cycles", type=int, default=3, help="Minimum cycles per well-target.")
     return parser.parse_args(argv)
+
+
+def _hash_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _hash_input_path(path_text: str) -> str:
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    if not path.exists():
+        return ""
+    if path.is_file():
+        return _hash_file(path)
+    if path.is_dir():
+        digest = hashlib.sha256()
+        for child in sorted(path.rglob("*")):
+            if not child.is_file():
+                continue
+            rel = child.relative_to(path).as_posix().encode("utf-8")
+            digest.update(rel)
+            digest.update(_hash_file(child).encode("utf-8"))
+        return digest.hexdigest()
+    return ""
 
 
 def run_pipeline(args: argparse.Namespace) -> dict:
@@ -105,6 +134,11 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "curve_csv": str(curve_csv_arg or ""),
             "rdml": str(rdml_arg or ""),
             "plate_meta_csv": str(args.plate_meta_csv or ""),
+        },
+        "input_hashes": {
+            "curve_csv_sha256": _hash_input_path(str(curve_csv_arg or "")),
+            "rdml_sha256": _hash_input_path(str(rdml_arg or "")),
+            "plate_meta_csv_sha256": _hash_input_path(str(args.plate_meta_csv or "")),
         },
         "input_snapshot_date": "1970-01-01",
         "record_counts": {

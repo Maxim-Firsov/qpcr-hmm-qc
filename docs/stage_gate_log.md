@@ -83,3 +83,18 @@ Evidence paths:
 - `outputs/q4/q4_check_report.json`
 Summary:
 - Added replicate discordance and rerun decision logic, generated full fixture plate outputs, and confirmed three synthetic failure cases with explicit rerun reasons in manifest output.
+
+---
+
+Date (UTC): `2026-03-06T07:35:39Z`
+Gate: `Q5`
+Decision: `PASS`
+Evidence paths:
+- `src/report/render.py`
+- `tests/contract/test_output_contract.py`
+- `outputs/q5/plate_qc_summary.json`
+- `outputs/q5/report.html`
+- `outputs/q5/run_metadata.json`
+- `outputs/q5/contract_test_report.json`
+Summary:
+- Extended report sections to include overview/per-plate/rerun rationale, added metadata input hash fields, enforced contract checks, and generated Q5 contract evidence with all checks passing.

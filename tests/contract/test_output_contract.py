@@ -73,3 +73,13 @@ def test_output_contract_required_columns_and_keys(tmp_path):
     summary = json.loads((outdir / "plate_qc_summary.json").read_text(encoding="utf-8"))
     for key in ["schema_version", "generated_at_utc", "plates", "global_counts"]:
         assert key in summary
+
+    metadata = json.loads((outdir / "run_metadata.json").read_text(encoding="utf-8"))
+    assert "hash" in metadata["model_config"]
+    for key in ["curve_csv_sha256", "rdml_sha256", "plate_meta_csv_sha256"]:
+        assert key in metadata["input_hashes"]
+
+    report_html = (outdir / "report.html").read_text(encoding="utf-8")
+    assert "Overview" in report_html
+    assert "Per-Plate Summary" in report_html
+    assert "Rerun Rationale" in report_html
