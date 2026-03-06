@@ -50,6 +50,11 @@ def extract_rdml_metadata(path: str | Path) -> dict:
 
 
 def load_rdml(path: str | Path) -> list[dict]:
+    rows, _ = load_rdml_with_report(path)
+    return rows
+
+
+def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
     source = Path(path)
     try:
         root = ET.parse(source).getroot()
@@ -58,6 +63,8 @@ def load_rdml(path: str | Path) -> list[dict]:
 
     metadata = extract_rdml_metadata(source)
     rows: list[dict] = []
+    malformed_reason_counts: dict[str, int] = {"missing_fields": 0, "type_cast_error": 0}
+    total_data_nodes = 0
 
     for react in root.iter():
         if _local_name(react.tag) != "react":
@@ -77,9 +84,17 @@ def load_rdml(path: str | Path) -> list[dict]:
         for data_node in react.iter():
             if _local_name(data_node.tag) != "data":
                 continue
+            total_data_nodes += 1
             cycle_value = _extract_value(data_node, "cyc", "cycle")
             fluor_value = _extract_value(data_node, "fluor", "fluorescence")
             if not cycle_value or not fluor_value:
+                malformed_reason_counts["missing_fields"] += 1
+                continue
+            try:
+                cycle = int(cycle_value)
+                fluorescence = float(fluor_value)
+            except ValueError:
+                malformed_reason_counts["type_cast_error"] += 1
                 continue
             rows.append(
                 {
@@ -88,11 +103,21 @@ def load_rdml(path: str | Path) -> list[dict]:
                     "well_id": well_id,
                     "sample_id": sample_id,
                     "target_id": target_id,
-                    "cycle": int(cycle_value),
-                    "fluorescence": float(fluor_value),
+                    "cycle": cycle,
+                    "fluorescence": fluorescence,
                 }
             )
 
     if not rows:
         raise ValueError(f"RDML did not contain any readable react/data rows: {source}")
-    return rows
+    malformed_rows = malformed_reason_counts["missing_fields"] + malformed_reason_counts["type_cast_error"]
+    report = {
+        "file_name": source.name,
+        "run_id": metadata["run_id"],
+        "instrument": metadata["instrument"],
+        "total_data_nodes": total_data_nodes,
+        "parsed_rows": len(rows),
+        "malformed_rows": malformed_rows,
+        "malformed_reason_counts": malformed_reason_counts,
+    }
+    return rows, report

@@ -1,0 +1,69 @@
+{
+  "generated_utc": "2026-03-06T07:27:36.959837Z",
+  "canonical_schema_required_columns": [
+    "run_id",
+    "plate_id",
+    "well_id",
+    "sample_id",
+    "target_id",
+    "cycle",
+    "fluorescence"
+  ],
+  "summary": {
+    "raw_rows": 9,
+    "normalized_rows": 9,
+    "schema_failures": 0,
+    "malformed_rows": 0,
+    "rejected_rows": 0
+  },
+  "checks": {
+    "fixture_count_non_excluded": 3,
+    "all_non_excluded_mapped": true,
+    "malformed_rows_counted_and_reported": true,
+    "total_malformed_rows": 0,
+    "total_schema_failures": 0,
+    "total_rejected_rows": 0,
+    "q2_pass": true
+  },
+  "fixtures": [
+    {
+      "file_name": "rdml_abi_7500.rdml",
+      "status": "included",
+      "exists": true,
+      "run_id": "run_abi_7500",
+      "instrument": "ABI_7500",
+      "raw_rows": 3,
+      "normalized_rows": 3,
+      "malformed_rows": 0,
+      "schema_failures": 0,
+      "rejected_rows": 0,
+      "validation_error_counts": {}
+    },
+    {
+      "file_name": "rdml_biorad_cfx96.rdml",
+      "status": "included",
+      "exists": true,
+      "run_id": "run_cfx96",
+      "instrument": "BioRad_CFX96",
+      "raw_rows": 3,
+      "normalized_rows": 3,
+      "malformed_rows": 0,
+      "schema_failures": 0,
+      "rejected_rows": 0,
+      "validation_error_counts": {}
+    },
+    {
+      "file_name": "rdml_roche_lc480.rdml",
+      "status": "included",
+      "exists": true,
+      "run_id": "run_lc480",
+      "instrument": "Roche_LightCycler_480",
+      "raw_rows": 3,
+      "normalized_rows": 3,
+      "malformed_rows": 0,
+      "schema_failures": 0,
+      "rejected_rows": 0,
+      "validation_error_counts": {}
+    }
+  ]
+}

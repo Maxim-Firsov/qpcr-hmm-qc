@@ -14,6 +14,7 @@ from src.core.qc_rules import apply_qc_rules
 from src.core.validate import validate_rows
 from src.export.writers import write_csv, write_json
 from src.io.csv_loader import load_curve_csv, load_plate_meta_csv
+from src.io.rdml_loader import load_rdml
 from src.report.render import render_report
 
 WELL_CALL_FIELDS = [
@@ -43,8 +44,10 @@ RERUN_FIELDS = [
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run qPCR HMM QC pipeline in canonical CSV mode.")
-    parser.add_argument("--curve-csv", required=True, help="Canonical curve CSV input path.")
+    parser = argparse.ArgumentParser(description="Run qPCR HMM QC pipeline.")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--curve-csv", required=False, help="Canonical curve CSV input path.")
+    mode.add_argument("--rdml", required=False, help="RDML file or directory path.")
     parser.add_argument("--plate-meta-csv", required=False, help="Optional plate metadata CSV path.")
     parser.add_argument("--outdir", required=True, help="Output directory.")
     parser.add_argument("--min-cycles", type=int, default=3, help="Minimum cycles per well-target.")
@@ -55,7 +58,19 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    raw = load_curve_csv(args.curve_csv)
+    rdml_arg = getattr(args, "rdml", None)
+    curve_csv_arg = getattr(args, "curve_csv", None)
+    if rdml_arg:
+        rdml_path = Path(rdml_arg)
+        rdml_files = sorted(rdml_path.glob("*.rdml")) if rdml_path.is_dir() else [rdml_path]
+        raw: list[dict] = []
+        for rdml_file in rdml_files:
+            raw.extend(load_rdml(rdml_file))
+        execution_mode = "rdml"
+    else:
+        raw = load_curve_csv(curve_csv_arg)
+        execution_mode = "curve_csv"
+
     normalized = normalize_rows(raw)
     eligible, rejected, validation_summary = validate_rows(normalized, min_cycles=args.min_cycles)
     features = build_features(eligible)
@@ -84,8 +99,12 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     metadata = {
         "schema_version": "v0.1.0",
         "tool_version": "0.1.0",
-        "execution_mode": "curve_csv",
-        "inputs": {"curve_csv": str(args.curve_csv), "plate_meta_csv": str(args.plate_meta_csv or "")},
+        "execution_mode": execution_mode,
+        "inputs": {
+            "curve_csv": str(curve_csv_arg or ""),
+            "rdml": str(rdml_arg or ""),
+            "plate_meta_csv": str(args.plate_meta_csv or ""),
+        },
         "input_snapshot_date": "1970-01-01",
         "record_counts": {
             "raw_rows": len(raw),

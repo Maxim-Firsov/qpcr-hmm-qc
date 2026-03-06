@@ -40,3 +40,19 @@ Evidence paths:
 - `tests/unit/test_rdml_loader.py`
 Summary:
 - Added three manifest-tracked RDML fixtures with distinct source URLs and instrument tags, implemented deterministic RDML XML intake parsing, and generated a parse report with zero fatal errors and no hash mismatches.
+
+---
+
+Date (UTC): `2026-03-06T07:27:36Z`
+Gate: `Q2`
+Decision: `PASS`
+Evidence paths:
+- `src/io/rdml_loader.py`
+- `docs/io_contract.md`
+- `tests/unit/test_csv_loader.py`
+- `tests/unit/test_normalize.py`
+- `tests/unit/test_validate.py`
+- `tests/unit/test_canonicalization_contract.py`
+- `outputs/q2/canonicalization_report.json`
+Summary:
+- Locked parser path from RDML to canonical schema, added schema-level canonicalization tests, and generated a canonicalization report showing all non-excluded fixtures mapped with zero schema failures and explicit malformed-row counts.
