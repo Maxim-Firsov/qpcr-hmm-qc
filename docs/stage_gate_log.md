@@ -56,3 +56,16 @@ Evidence paths:
 - `outputs/q2/canonicalization_report.json`
 Summary:
 - Locked parser path from RDML to canonical schema, added schema-level canonicalization tests, and generated a canonicalization report showing all non-excluded fixtures mapped with zero schema failures and explicit malformed-row counts.
+
+---
+
+Date (UTC): `2026-03-06T07:30:19Z`
+Gate: `Q3`
+Decision: `PASS`
+Evidence paths:
+- `config/model_v1.yaml`
+- `src/core/hmm_infer.py`
+- `tests/unit/test_hmm_infer.py`
+- `outputs/q3/runtime_benchmark.json`
+Summary:
+- Locked inference thresholds to `model_v1`, added deterministic-model unit coverage, and produced benchmark evidence confirming state-path emission for all eligible curves, repeat-run determinism, and runtime target compliance.

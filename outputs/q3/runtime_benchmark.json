@@ -1,0 +1,29 @@
+{
+  "generated_utc": "2026-03-06T07:30:19.891723Z",
+  "model_config": {
+    "path": "config\\model_v1.yaml",
+    "sha256": "46c883959947c3b05d72ee515989d6b18ed9399719bc341dcb98cb39593dad4c",
+    "thresholds": {
+      "exp_df_threshold": 0.12,
+      "plateau_df_threshold": 0.03
+    }
+  },
+  "dataset_summary": {
+    "raw_rows": 9,
+    "eligible_rows": 9,
+    "validation_error_counts": {}
+  },
+  "checks": {
+    "eligible_curve_count": 3,
+    "state_path_emitted_for_each_curve": true,
+    "deterministic_same_input": true,
+    "avg_infer_runtime_ms": 0.313068,
+    "runtime_target_ms": 1.0,
+    "runtime_target_met": true,
+    "q3_pass": true
+  },
+  "determinism": {
+    "run_a_path_hash": "f6c1241a5159561906929d4e750c437be483db39e2ae269424957fe7c49856dc",
+    "run_b_path_hash": "f6c1241a5159561906929d4e750c437be483db39e2ae269424957fe7c49856dc"
+  }
+}

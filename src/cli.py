@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.core.aggregate import summarize_plates
 from src.core.features import build_features
-from src.core.hmm_infer import infer_state_paths
+from src.core.hmm_infer import infer_state_paths, load_model_config
 from src.core.normalize import normalize_rows
 from src.core.qc_rules import apply_qc_rules
 from src.core.validate import validate_rows
@@ -74,7 +74,8 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     normalized = normalize_rows(raw)
     eligible, rejected, validation_summary = validate_rows(normalized, min_cycles=args.min_cycles)
     features = build_features(eligible)
-    inferred = infer_state_paths(features)
+    model_config = load_model_config()
+    inferred = infer_state_paths(features, model_config_path=model_config["path"])
     plate_meta = load_plate_meta_csv(args.plate_meta_csv) if args.plate_meta_csv else {}
     well_calls = apply_qc_rules(inferred, plate_meta=plate_meta)
     plate_summary = summarize_plates(well_calls)
@@ -112,7 +113,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "eligible_rows": len(eligible),
             "rejected_rows": len(rejected),
         },
-        "model_config": {"name": "model_v1", "hash": "deterministic-scaffold"},
+        "model_config": {"name": "model_v1", "hash": model_config["sha256"]},
         "data_validation_summary": validation_summary,
         "timing_seconds": 0.0,
         "warnings": [],
