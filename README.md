@@ -11,6 +11,7 @@ than a clinically validated production system.
 
 - RDML and canonical CSV input support
 - Plate metadata joins tolerate common well-ID formats such as `A1` and `A01`
+- Supports both plain XML `.rdml` files and ZIP-container RDML archives from public example datasets
 - Deterministic forward-only Viterbi state decoding with locked model configuration
 - Ct estimation from adjusted amplification curves
 - QC rules for NTC contamination, replicate discordance, positive-control failure, late amplification, low-signal curves, and edge-well review
@@ -76,8 +77,12 @@ When `--plate-meta-csv` is supplied, metadata well IDs are normalized to the sam
 ## Performance
 
 - Current automated runtime coverage includes a synthetic 96-well benchmark fixture in `tests/integration/test_runtime_benchmark.py`
-- Full local test suite currently runs in well under a second on the development machine
-- Larger 96/384-well claims should still be treated as provisional until benchmark evidence in `RESULTS.md` is expanded
+- Full local test suite currently runs in under two seconds on the development machine
+- Public RDML spot benchmarks currently include:
+  - `stepone_std.rdml` (`960` rows, about `0.06s`)
+  - `BioRad_qPCR_melt.rdml` (`2460` rows, about `0.13s`)
+  - `lc96_bACTXY.rdml` (`19200` rows, about `1.23s`)
+- Larger 96/384-well claims should still be treated as provisional until benchmark evidence is expanded across more machines and fixture types
 
 ## Quality Checks
 
@@ -91,6 +96,7 @@ powershell -ExecutionPolicy Bypass -File scripts\deep_sweep.ps1
 - Benchmark summary: `RESULTS.md`
 - Validation protocol and limits: `VALIDATION.md`
 - Data provenance snapshot: `docs/data_sources.md`
+- Public fixture sources are drawn from the official `PCRuniversum/RDML` example set documented in `docs/data_sources.md`
 
 ## Current Limits
 

@@ -6,8 +6,11 @@ This document records the validation dataset design, metrics, and current limita
 
 - RDML intake fixtures: `data/raw/*.rdml` tracked in `data/raw/manifest.csv`
 - Q4/Q5/Q6 validation fixture: `data/fixtures/q4_curves.csv` with metadata `data/fixtures/q4_plate_meta.csv`
-- Snapshot date: 2026-03-06 UTC
-- Fixture type: deterministic synthetic validation fixture for gate evidence, not clinical data
+- Public parser/runtime fixtures: `data/raw/stepone_std.rdml`, `data/raw/BioRad_qPCR_melt.rdml`, `data/raw/lc96_bACTXY.rdml`
+- Snapshot date: 2026-03-12 UTC
+- Fixture types:
+  - deterministic synthetic validation fixture for rule-level expected outcomes
+  - public RDML fixtures for parser coverage and runtime evidence, not clinical truth data
 
 ## 2. Labeling Methodology
 
@@ -36,9 +39,29 @@ Supporting evidence:
 - `outputs/q4/q4_check_report.json`
 - `outputs/q6/reproducibility_report.json`
 
-## 4. Known Failure Modes and Limitations
+## 4. Public RDML Coverage Evidence
+
+Observed parser coverage on public fixtures:
+
+- `stepone_std.rdml`: `960` parsed rows across `24` well-target traces
+- `BioRad_qPCR_melt.rdml`: `2460` parsed rows across `60` well-target traces
+- `lc96_bACTXY.rdml`: `19200` parsed rows across `384` well-target traces
+
+What this supports:
+
+- ZIP-container `.rdml` archives are now parsed successfully, not just plain XML fixtures
+- numeric `react id` values are mapped into canonical well IDs when RDML plate geometry is present
+- the pipeline can execute end to end on small, medium, and larger public RDML examples
+
+What this does not support:
+
+- no claim of biological/clinical correctness on these public fixtures
+- no claim that melt-stage handling is fully calibrated or assay-specific
+- no claim that current review/pass outcomes are reference labels
+
+## 5. Known Failure Modes and Limitations
 
 - Current validation is synthetic and low-scale; no claim is made about clinical sensitivity/specificity.
-- RDML parsing currently targets common minimal structures in fixtures and may require extensions for vendor-specific edge schemas.
+- RDML parsing now covers plain XML and ZIP-container RDML examples, but vendor-specific edge schemas may still require extensions.
 - Confidence and state assignment use deterministic threshold logic in `v0.1.0`; statistical calibration against external truth datasets is not included yet.
-- Runtime and memory measurements were collected on a small fixture and should be re-benchmarked on full plate datasets before production deployment.
+- Runtime evidence now includes public RDML fixtures, but memory measurements are still not captured.
