@@ -29,8 +29,8 @@ def render_report(summary: dict) -> str:
     rows = "".join(plate_rows)
     rerun_html = "<ul>" + "".join(rerun_items) + "</ul>" if rerun_items else "<p>No rerun-triggering flags detected.</p>"
     return (
-        "<html><head><title>qPCR HMM QC Report</title></head><body>"
-        "<h1>qPCR HMM QC Summary</h1>"
+        "<html><head><title>qPCR Quality Control Report</title></head><body>"
+        "<h1>qPCR Quality Control Summary</h1>"
         "<h2>Overview</h2>"
         f"<p>Pass={global_counts.get('pass', 0)} | Review={global_counts.get('review', 0)} | Rerun={global_counts.get('rerun', 0)}</p>"
         "<h2>Per-Plate Summary</h2>"

@@ -1,6 +1,6 @@
-# qpcr-hmm-qc
+# qpcr-quality-control
 
-`qpcr-hmm-qc` is a deterministic quality-control pipeline for qPCR amplification curves.
+`qpcr-quality-control` is a deterministic quality-control pipeline for qPCR amplification curves.
 It ingests RDML or canonical curve CSV, performs HMM-style state calling, applies QC rules
 (including NTC contamination and replicate discordance checks), and emits auditable outputs.
 

@@ -1,4 +1,4 @@
-"""CLI entrypoint for qPCR HMM QC scaffold."""
+"""CLI entrypoint for qPCR quality control pipeline."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ RERUN_FIELDS = [
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run qPCR HMM QC pipeline.")
+    parser = argparse.ArgumentParser(description="Run qPCR quality control pipeline.")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--curve-csv", required=False, help="Canonical curve CSV input path.")
     mode.add_argument("--rdml", required=False, help="RDML file or directory path.")
