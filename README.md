@@ -88,6 +88,12 @@ curve_csv,data\fixtures\q4_curves.csv,outputs\batch_run_001,3,96,false,data\fixt
 rdml,data\raw\stepone_std.rdml,outputs\batch_run_002,25,96,false,
 ```
 
+Demo workflow:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_public_demo.ps1 -Fixture stepone_std.rdml -PlateSchema 96
+```
+
 ## Outputs
 
 Each run writes:
@@ -145,6 +151,11 @@ Additional local validation reference:
 
 - `PCRedux_1.2-1.tar.gz` can be kept outside version control and contains public decision files such as `decision_res_stepone_std.csv` and `decision_res_lc96_bACTXY.csv`.
 - Those PCRedux decision files strengthen the portfolio story around public reference material, but they are not yet consumed automatically by this Python pipeline.
+- A local comparison utility is now available for the cleanest supported fixture mapping:
+
+```powershell
+python scripts\compare_pcrredux.py --well-calls outputs\demo_stepone_std\well_calls.csv --fixture stepone_std --pcrredux-tarball data\raw\PCRedux_1.2-1.tar.gz --out outputs\demo_stepone_std\pcrredux_compare.json
+```
 
 ## Current Limits
 
