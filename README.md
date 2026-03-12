@@ -138,6 +138,7 @@ powershell -ExecutionPolicy Bypass -File scripts\deep_sweep.ps1
 - Validation protocol and limits: `VALIDATION.md`
 - Data provenance snapshot: `docs/data_sources.md`
 - Public fixture sources are drawn from the official `PCRuniversum/RDML` example set documented in `docs/data_sources.md`
+- Output compatibility is guarded by versioned contract tests in `tests/contract/`
 
 ## Public Fixture Coverage
 
