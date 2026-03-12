@@ -1,16 +1,28 @@
 # qpcr-quality-control
 
-`qpcr-quality-control` is a deterministic quality-control pipeline for qPCR amplification curves.
-It ingests RDML or canonical curve CSV, performs HMM-style state calling, applies QC rules
-(including NTC contamination and replicate discordance checks), and emits auditable outputs.
+`qpcr-quality-control` is a deterministic local quality-control pipeline for qPCR amplification curves.
+It ingests RDML or canonical curve CSV, performs fast forward-only Viterbi state decoding, applies
+lightweight QC rules, and emits auditable CSV/JSON/HTML outputs without requiring hosted services.
+
+The project is positioned as an explainable, reproducible portfolio-grade pipeline prototype rather
+than a clinically validated production system.
 
 ## Features
 
 - RDML and canonical CSV input support
-- Deterministic state inference with locked model configuration
-- Well-level QC flags and rerun recommendations
-- Plate-level summary and HTML report generation
-- Unit, integration, and contract tests
+- Deterministic forward-only Viterbi state decoding with locked model configuration
+- Ct estimation from adjusted amplification curves
+- QC rules for NTC contamination, replicate discordance, positive-control failure, late amplification, low-signal curves, and edge-well review
+- Plate-level summary with edge-effect alerting
+- Static HTML report plus auditable run metadata with input hashes and measured runtime
+- Unit, integration, and contract tests with a lightweight runtime benchmark fixture
+
+## Scope and Constraints
+
+- Runs locally on small public fixtures and synthetic validation data
+- Optimized for fast laptop execution and simple dependency footprint
+- Does not claim clinical sensitivity/specificity or production-lab validation
+- Keeps bundled data small so repository clone/download size stays practical
 
 ## Repository Layout
 
@@ -31,7 +43,7 @@ python -m pip install -e .
 Run on RDML input:
 
 ```powershell
-python -m src.cli --rdml data\raw --outdir outputs\run_rdml --min-cycles 1
+python -m src.cli --rdml data\raw --outdir outputs\run_rdml --min-cycles 25
 ```
 
 Run on canonical CSV input:
@@ -50,7 +62,15 @@ Each run writes:
 - `run_metadata.json`
 - `report.html`
 
+`run_metadata.json` includes execution mode, input hashes, validation summary, warning list, and measured runtime in seconds.
+
 Schema expectations are documented in `docs/io_contract.md` and enforced in `tests/contract/test_output_contract.py`.
+
+## Performance
+
+- Current automated runtime coverage includes a synthetic 96-well benchmark fixture in `tests/integration/test_runtime_benchmark.py`
+- Full local test suite currently runs in well under a second on the development machine
+- Larger 96/384-well claims should still be treated as provisional until benchmark evidence in `RESULTS.md` is expanded
 
 ## Quality Checks
 
@@ -64,6 +84,13 @@ powershell -ExecutionPolicy Bypass -File scripts\deep_sweep.ps1
 - Benchmark summary: `RESULTS.md`
 - Validation protocol and limits: `VALIDATION.md`
 - Data provenance snapshot: `docs/data_sources.md`
+
+## Current Limits
+
+- Validation evidence is still based on synthetic fixtures and small public RDML samples
+- RDML parsing covers common fixture patterns and aliases, not every vendor-specific export edge case
+- The report is intentionally static and lightweight rather than interactive
+- The QC layer is deterministic and explainable, but not statistically calibrated against external truth datasets
 
 ## License
 
