@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import sys
@@ -57,6 +58,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--curve-csv", required=False, help="Canonical curve CSV input path.")
     mode.add_argument("--rdml", required=False, help="RDML file or directory path.")
+    mode.add_argument("--batch-manifest", required=False, help="CSV manifest describing multiple pipeline runs.")
     parser.add_argument("--plate-meta-csv", required=False, help="Optional plate metadata CSV path.")
     parser.add_argument("--outdir", required=True, help="Output directory.")
     parser.add_argument("--min-cycles", type=int, default=3, help="Minimum cycles per well-target.")
@@ -71,6 +73,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Write empty outputs instead of failing when all rows are rejected during validation.",
     )
+    parser.add_argument("--fail-on-review", action="store_true", help="Exit non-zero if any well-target is marked review.")
+    parser.add_argument("--fail-on-rerun", action="store_true", help="Exit non-zero if any well-target is marked rerun.")
+    parser.add_argument("--fail-on-edge-alert", action="store_true", help="Exit non-zero if any plate triggers edge_effect_alert.")
     return parser.parse_args(argv)
 
 
@@ -258,13 +263,89 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         "well_calls": len(well_calls),
         "rerun_manifest": len(rerun_manifest),
         "plate_count": len(plate_summary["plates"]),
+        "global_counts": plate_summary["global_counts"],
+        "edge_alert_plates": [plate["plate_id"] for plate in plate_summary["plates"] if plate.get("edge_effect_alert")],
+        "summary_path": str(outdir / "summary.json"),
     }
+
+
+def _policy_failures(result: dict, fail_on_review: bool, fail_on_rerun: bool, fail_on_edge_alert: bool) -> list[str]:
+    failures: list[str] = []
+    global_counts = result.get("global_counts", {})
+    if fail_on_review and int(global_counts.get("review", 0)) > 0:
+        failures.append(f"review_wells_present:{global_counts['review']}")
+    if fail_on_rerun and int(global_counts.get("rerun", 0)) > 0:
+        failures.append(f"rerun_wells_present:{global_counts['rerun']}")
+    edge_alert_plates = result.get("edge_alert_plates", [])
+    if fail_on_edge_alert and edge_alert_plates:
+        failures.append(f"edge_alert_plates:{','.join(edge_alert_plates)}")
+    return failures
+
+
+def _manifest_rows(path: str | Path) -> list[dict]:
+    with Path(path).open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def run_batch_manifest(args: argparse.Namespace) -> dict:
+    manifest_path = Path(args.batch_manifest)
+    rows = _manifest_rows(manifest_path)
+    results = []
+    for index, row in enumerate(rows, start=1):
+        input_mode = (row.get("input_mode") or "").strip().lower()
+        if input_mode not in {"rdml", "curve_csv"}:
+            raise ValueError(f"Unsupported input_mode in batch manifest row {index}: {input_mode!r}")
+        run_args = argparse.Namespace(
+            rdml=row.get("input_path") if input_mode == "rdml" else None,
+            curve_csv=row.get("input_path") if input_mode == "curve_csv" else None,
+            plate_meta_csv=row.get("plate_meta_csv") or None,
+            outdir=row.get("outdir") or str(Path(args.outdir) / f"batch_run_{index:03d}"),
+            min_cycles=int(row.get("min_cycles") or args.min_cycles),
+            allow_empty_run=str(row.get("allow_empty_run") or "").strip().lower() in {"1", "true", "yes"},
+            plate_schema=(row.get("plate_schema") or args.plate_schema or "auto"),
+        )
+        result = run_pipeline(run_args)
+        result["manifest_row"] = index
+        result["input_mode"] = input_mode
+        result["input_path"] = row.get("input_path", "")
+        results.append(result)
+
+    batch_summary = {
+        "schema_version": "v0.1.0",
+        "manifest_path": str(manifest_path),
+        "run_count": len(results),
+        "results": results,
+    }
+    write_json(Path(args.outdir) / "batch_summary.json", batch_summary)
+    return batch_summary
 
 
 def main(argv: list[str] | None = None) -> int:
     try:
         args = parse_args(argv)
-        run_pipeline(args)
+        if getattr(args, "batch_manifest", None):
+            batch_summary = run_batch_manifest(args)
+            failures = []
+            for result in batch_summary["results"]:
+                failures.extend(
+                    _policy_failures(
+                        result,
+                        fail_on_review=args.fail_on_review,
+                        fail_on_rerun=args.fail_on_rerun,
+                        fail_on_edge_alert=args.fail_on_edge_alert,
+                    )
+                )
+        else:
+            result = run_pipeline(args)
+            failures = _policy_failures(
+                result,
+                fail_on_review=args.fail_on_review,
+                fail_on_rerun=args.fail_on_rerun,
+                fail_on_edge_alert=args.fail_on_edge_alert,
+            )
+        if failures:
+            print("qpcr-quality-control policy failure: " + "; ".join(failures), file=sys.stderr)
+            return 2
         return 0
     except ValueError as exc:
         print(f"qpcr-quality-control: {exc}", file=sys.stderr)

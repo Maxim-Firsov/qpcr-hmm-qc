@@ -60,6 +60,28 @@ By default the CLI fails with a non-zero exit if validation rejects every well-t
 
 Use `--plate-schema 96` or `--plate-schema 384` when your workflow knows the plate format. `auto` infers the smallest standard geometry that fits the observed well IDs.
 
+Policy-driven pipeline gating:
+
+```powershell
+python -m src.cli --curve-csv data\fixtures\q4_curves.csv --outdir outputs\gate_run --min-cycles 3 --fail-on-review
+python -m src.cli --curve-csv data\fixtures\q4_curves.csv --outdir outputs\gate_run --min-cycles 3 --fail-on-rerun
+python -m src.cli --curve-csv data\fixtures\q4_curves.csv --outdir outputs\gate_run --min-cycles 3 --fail-on-edge-alert
+```
+
+Batch manifest mode:
+
+```powershell
+python -m src.cli --batch-manifest batch_runs.csv --outdir outputs\batch
+```
+
+The batch manifest is a CSV with rows such as:
+
+```csv
+input_mode,input_path,outdir,min_cycles,plate_schema,allow_empty_run,plate_meta_csv
+curve_csv,data\fixtures\q4_curves.csv,outputs\batch_run_001,3,96,false,data\fixtures\q4_plate_meta.csv
+rdml,data\raw\stepone_std.rdml,outputs\batch_run_002,25,96,false,
+```
+
 ## Outputs
 
 Each run writes:

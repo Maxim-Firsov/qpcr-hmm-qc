@@ -12,6 +12,19 @@ Secondary mode (adapter/testing path):
 
 - `--curve-csv <path>`
 
+Batch mode:
+
+- `--batch-manifest <csv-path>`
+- required manifest columns:
+  - `input_mode` (`rdml` or `curve_csv`)
+  - `input_path`
+- optional manifest columns:
+  - `outdir`
+  - `plate_meta_csv`
+  - `min_cycles`
+  - `plate_schema`
+  - `allow_empty_run`
+
 Canonical row schema required columns:
 
 - `run_id`
