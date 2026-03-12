@@ -1,3 +1,4 @@
+import tarfile
 from pathlib import Path
 
 from scripts.compare_pcrredux import compare_stepone
@@ -17,6 +18,20 @@ def test_compare_stepone_matches_expected_labels(tmp_path):
         encoding="utf-8",
     )
 
-    report = compare_stepone(well_calls, Path("data/raw/PCRedux_1.2-1.tar.gz"))
+    tarball = tmp_path / "PCRedux_1.2-1.tar.gz"
+    csv_payload = "\n".join(
+        [
+            "stepone_std,test.result.1,test.result.2,test.result.3,conformity",
+            "A01~NTC_RNase P~ntc~RNase P~Run001,n,n,n,TRUE",
+            "A04~pop1_RNase P~unkn~RNase P~Run001,y,y,y,TRUE",
+        ]
+    ) + "\n"
+    source_csv = tmp_path / "decision_res_stepone_std.csv"
+    source_csv.write_text(csv_payload, encoding="utf-8")
+
+    with tarfile.open(tarball, "w:gz") as archive:
+        archive.add(source_csv, arcname="PCRedux/inst/decision_res_stepone_std.csv")
+
+    report = compare_stepone(well_calls, tarball)
     assert report["matched_rows"] >= 2
     assert report["label_matches"] >= 2
