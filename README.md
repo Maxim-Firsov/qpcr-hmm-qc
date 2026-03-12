@@ -100,6 +100,19 @@ powershell -ExecutionPolicy Bypass -File scripts\deep_sweep.ps1
 - Data provenance snapshot: `docs/data_sources.md`
 - Public fixture sources are drawn from the official `PCRuniversum/RDML` example set documented in `docs/data_sources.md`
 
+## Public Fixture Coverage
+
+| Fixture | Source family | What it currently proves |
+|---|---|---|
+| `stepone_std.rdml` | `PCRuniversum/RDML` | ZIP-container RDML parsing, end-to-end pipeline execution, small public benchmark |
+| `BioRad_qPCR_melt.rdml` | `PCRuniversum/RDML` | Bio-Rad-style archived RDML parsing, per-cycle temperature capture, medium public benchmark |
+| `lc96_bACTXY.rdml` | `PCRuniversum/RDML` | Larger public workload (`19200` rows), numeric react-to-well mapping, larger runtime stress test |
+
+Additional local validation reference:
+
+- `PCRedux_1.2-1.tar.gz` can be kept outside version control and contains public decision files such as `decision_res_stepone_std.csv` and `decision_res_lc96_bACTXY.csv`.
+- Those PCRedux decision files strengthen the portfolio story around public reference material, but they are not yet consumed automatically by this Python pipeline.
+
 ## Current Limits
 
 - Validation evidence is still based on synthetic fixtures and small public RDML samples

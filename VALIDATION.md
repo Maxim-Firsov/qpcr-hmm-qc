@@ -59,9 +59,18 @@ What this does not support:
 - no claim that melt-stage handling is fully calibrated or assay-specific
 - no claim that current review/pass outcomes are reference labels
 
-## 5. Known Failure Modes and Limitations
+## 5. Additional Public Reference Material
+
+An optional local-only reference package, `PCRedux_1.2-1.tar.gz`, contains public decision files that correspond to some of the same fixture families used here, including:
+
+- `decision_res_stepone_std.csv`
+- `decision_res_lc96_bACTXY.csv`
+
+These files are useful as portfolio evidence that public third-party decision references exist, but they are not yet integrated into automated Python-side validation because identifier mapping between the PCRedux decision tables and current pipeline outputs still needs explicit reconciliation.
+
+## 6. Known Failure Modes and Limitations
 
 - Current validation is synthetic and low-scale; no claim is made about clinical sensitivity/specificity.
 - RDML parsing now covers plain XML and ZIP-container RDML examples, but vendor-specific edge schemas may still require extensions.
 - Confidence and state assignment use deterministic threshold logic in `v0.1.0`; statistical calibration against external truth datasets is not included yet.
-- Runtime evidence now includes public RDML fixtures, but memory measurements are still not captured.
+- Runtime evidence now includes public RDML fixtures, and peak traced memory is captured in `run_metadata.json`, but full process RSS is not.
