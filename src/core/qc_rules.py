@@ -60,6 +60,8 @@ def apply_qc_rules(
     inferred_rows: Iterable[dict],
     plate_meta: dict[tuple[str, str], dict] | None = None,
     confidence_threshold: float = 0.6,
+    late_ct_threshold: float = LATE_CT_THRESHOLD,
+    low_signal_threshold: float = LOW_SIGNAL_THRESHOLD,
     plate_schema: str = "auto",
 ) -> list[dict]:
     plate_meta = plate_meta or {}
@@ -94,7 +96,7 @@ def apply_qc_rules(
             flags.append("ntc_contamination")
         if avg_conf < confidence_threshold:
             flags.append("low_confidence")
-        if max_signal < LOW_SIGNAL_THRESHOLD:
+        if max_signal < low_signal_threshold:
             flags.append("low_signal_curve")
 
         if amplified and "low_confidence" not in flags:
@@ -105,7 +107,7 @@ def apply_qc_rules(
             call_label = "not_amplified"
 
         ct_estimate = _estimate_ct(rows, amplified=amplified)
-        if ct_estimate is not None and ct_estimate >= LATE_CT_THRESHOLD:
+        if ct_estimate is not None and ct_estimate >= late_ct_threshold:
             flags.append("late_amplification")
         if control_type == "positive_control" and call_label != "amplified":
             flags.append("positive_control_failure")
@@ -113,7 +115,7 @@ def apply_qc_rules(
             flags.append("edge_well_review")
 
         confidence = avg_conf
-        if amplified and ct_estimate is not None and ct_estimate < LATE_CT_THRESHOLD:
+        if amplified and ct_estimate is not None and ct_estimate < late_ct_threshold:
             confidence += 0.05
         if "late_amplification" in flags:
             confidence -= 0.15

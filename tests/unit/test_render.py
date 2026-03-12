@@ -19,12 +19,24 @@ def test_render_report_has_table():
                     "plate_status": "review",
                 }
             ]
-        }
+        },
+        well_calls=[
+            {
+                "plate_id": "p1",
+                "well_id": "A01",
+                "target_id": "t1",
+                "qc_status": "rerun",
+                "ct_estimate": 36.2,
+                "qc_flags": "[\"late_amplification\"]",
+                "amplification_confidence": 0.4,
+            }
+        ],
     )
     assert "<table" in html
     assert "p1" in html
     assert "Overview" in html
     assert "Per-Plate Summary" in html
     assert "Plate Alerts" in html
+    assert "Top Flagged Wells" in html
     assert "Rerun Rationale" in html
     assert "Generated at 2026-03-12T00:00:00Z" in html

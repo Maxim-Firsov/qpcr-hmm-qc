@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 
-def render_report(summary: dict) -> str:
+def render_report(summary: dict, well_calls: list[dict] | None = None) -> str:
     plate_rows = []
     rerun_items = []
     alert_items = []
+    flagged_rows = []
     global_counts = summary.get("global_counts", {})
     for plate in summary.get("plates", []):
         plate_rows.append(
@@ -33,6 +34,27 @@ def render_report(summary: dict) -> str:
     rows = "".join(plate_rows)
     rerun_html = "<ul>" + "".join(rerun_items) + "</ul>" if rerun_items else "<p>No rerun-triggering flags detected.</p>"
     alert_html = "<ul>" + "".join(alert_items) + "</ul>" if alert_items else "<p>No plate-level alerts triggered.</p>"
+    for call in sorted(
+        [call for call in (well_calls or []) if call.get("qc_status") != "pass"],
+        key=lambda item: (item.get("qc_status") != "rerun", item.get("amplification_confidence", 0.0), item.get("well_id", "")),
+    )[:10]:
+        flagged_rows.append(
+            "<tr>"
+            f"<td>{call.get('plate_id', '')}</td>"
+            f"<td>{call.get('well_id', '')}</td>"
+            f"<td>{call.get('target_id', '')}</td>"
+            f"<td>{call.get('qc_status', '')}</td>"
+            f"<td>{call.get('ct_estimate', '')}</td>"
+            f"<td>{call.get('qc_flags', '')}</td>"
+            "</tr>"
+        )
+    flagged_html = (
+        "<table><tr><th>Plate</th><th>Well</th><th>Target</th><th>Status</th><th>Ct</th><th>Flags</th></tr>"
+        + "".join(flagged_rows)
+        + "</table>"
+        if flagged_rows
+        else "<p>No non-pass wells detected.</p>"
+    )
     generated_at = summary.get("generated_at_utc", "unknown")
     return (
         "<html><head><title>qPCR Quality Control Report</title>"
@@ -58,6 +80,8 @@ def render_report(summary: dict) -> str:
         f"{rows}</table>"
         "<h2>Plate Alerts</h2>"
         f"{alert_html}"
+        "<h2>Top Flagged Wells</h2>"
+        f"{flagged_html}"
         "<h2>Rerun Rationale</h2>"
         f"{rerun_html}</body></html>"
     )

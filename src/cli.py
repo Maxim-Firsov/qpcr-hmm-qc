@@ -62,6 +62,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--plate-meta-csv", required=False, help="Optional plate metadata CSV path.")
     parser.add_argument("--outdir", required=True, help="Output directory.")
     parser.add_argument("--min-cycles", type=int, default=3, help="Minimum cycles per well-target.")
+    parser.add_argument("--confidence-threshold", type=float, default=0.6, help="Minimum mean state confidence before a call is downgraded to review.")
+    parser.add_argument("--late-ct-threshold", type=float, default=35.0, help="Ct threshold at or above which amplification is marked late.")
+    parser.add_argument("--low-signal-threshold", type=float, default=0.15, help="Adjusted fluorescence ceiling below which a trace is marked low signal.")
     parser.add_argument(
         "--plate-schema",
         choices=["auto", "96", "384"],
@@ -152,7 +155,14 @@ def run_pipeline(args: argparse.Namespace) -> dict:
 
     stage_started = time.perf_counter()
     plate_meta = load_plate_meta_csv(args.plate_meta_csv) if args.plate_meta_csv else {}
-    well_calls = apply_qc_rules(inferred, plate_meta=plate_meta, plate_schema=args.plate_schema)
+    well_calls = apply_qc_rules(
+        inferred,
+        plate_meta=plate_meta,
+        confidence_threshold=float(getattr(args, "confidence_threshold", 0.6)),
+        late_ct_threshold=float(getattr(args, "late_ct_threshold", 35.0)),
+        low_signal_threshold=float(getattr(args, "low_signal_threshold", 0.15)),
+        plate_schema=args.plate_schema,
+    )
     plate_summary = summarize_plates(well_calls, generated_at_utc=generated_at_utc, plate_schema=args.plate_schema)
     stage_timings["qc_seconds"] = round(time.perf_counter() - stage_started, 6)
 
@@ -203,6 +213,11 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         "tool_version": "0.1.0",
         "execution_mode": execution_mode,
         "plate_schema": args.plate_schema,
+        "qc_thresholds": {
+            "confidence_threshold": float(getattr(args, "confidence_threshold", 0.6)),
+            "late_ct_threshold": float(getattr(args, "late_ct_threshold", 35.0)),
+            "low_signal_threshold": float(getattr(args, "low_signal_threshold", 0.15)),
+        },
         "inputs": {
             "curve_csv": str(curve_csv_arg or ""),
             "rdml": str(rdml_arg or ""),
@@ -254,7 +269,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         "warning_codes": metadata["warning_codes"],
     }
     write_json(outdir / "summary.json", summary_payload)
-    (outdir / "report.html").write_text(render_report(plate_summary), encoding="utf-8")
+    (outdir / "report.html").write_text(render_report(plate_summary, well_calls=well_calls), encoding="utf-8")
     stage_timings["export_seconds"] = round(time.perf_counter() - stage_started, 6)
     metadata["stage_timings_seconds"] = stage_timings
     write_json(outdir / "run_metadata.json", metadata)

@@ -68,6 +68,12 @@ python -m src.cli --curve-csv data\fixtures\q4_curves.csv --outdir outputs\gate_
 python -m src.cli --curve-csv data\fixtures\q4_curves.csv --outdir outputs\gate_run --min-cycles 3 --fail-on-edge-alert
 ```
 
+Threshold overrides:
+
+```powershell
+python -m src.cli --rdml data\raw\stepone_std.rdml --outdir outputs\tuned_run --min-cycles 25 --confidence-threshold 0.7 --late-ct-threshold 33 --low-signal-threshold 0.2
+```
+
 Batch manifest mode:
 
 ```powershell
@@ -96,6 +102,8 @@ Each run writes:
 `summary.json` provides a compact machine-readable rollup for workflow orchestration.
 
 `run_metadata.json` includes execution mode, input hashes, validation summary, structured warning entries, warning codes, per-stage timings, measured runtime in seconds, and peak traced memory in MB.
+
+The HTML report now includes a "Top Flagged Wells" section so reviewers can see the highest-priority non-pass calls without opening CSV artifacts first.
 
 Schema expectations are documented in `docs/io_contract.md` and enforced in `tests/contract/test_output_contract.py`.
 

@@ -94,6 +94,7 @@ def test_output_contract_required_columns_and_keys(tmp_path):
     assert "peak_memory_mb" in metadata
     assert "stage_timings_seconds" in metadata
     assert "warning_codes" in metadata
+    assert "qc_thresholds" in metadata
     for key in ["curve_csv_sha256", "rdml_sha256", "plate_meta_csv_sha256"]:
         assert key in metadata["input_hashes"]
 

@@ -170,3 +170,34 @@ def test_edge_well_review_respects_384_geometry():
     flags = json.loads(calls[0]["qc_flags"])
     assert "low_confidence" in flags
     assert "edge_well_review" not in flags
+
+
+def test_qc_rules_accept_overridden_thresholds():
+    inferred = [
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B02",
+            "sample_id": "s1",
+            "target_id": "t1",
+            "cycle": 1,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.01,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B02",
+            "sample_id": "s1",
+            "target_id": "t1",
+            "cycle": 2,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.22,
+        },
+    ]
+    calls = apply_qc_rules(inferred, low_signal_threshold=0.3, late_ct_threshold=1.5)
+    flags = json.loads(calls[0]["qc_flags"])
+    assert "low_signal_curve" in flags
+    assert "late_amplification" in flags

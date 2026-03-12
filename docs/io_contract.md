@@ -25,6 +25,12 @@ Batch mode:
   - `plate_schema`
   - `allow_empty_run`
 
+CLI QC threshold overrides:
+
+- `--confidence-threshold <float>`
+- `--late-ct-threshold <float>`
+- `--low-signal-threshold <float>`
+
 Canonical row schema required columns:
 
 - `run_id`
