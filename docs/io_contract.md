@@ -25,12 +25,13 @@ Canonical row schema required columns:
 Optional:
 
 - `is_melt_stage`
+- `temperature_c`
 
 Parser path to canonical schema:
 
 1. `src/io/rdml_loader.py` (`load_rdml`) parses RDML XML into canonical rows.
 2. `src/core/normalize.py` enforces normalized IDs and typed cycle/fluorescence fields.
-3. `src/core/validate.py` applies schema/well/cycle guards and produces rejection summaries.
+3. `src/core/validate.py` applies schema/well/cycle guards, excludes rows marked as melt stage, and produces rejection summaries.
 
 `--plate-meta-csv` optional columns:
 

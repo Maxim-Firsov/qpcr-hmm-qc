@@ -12,6 +12,7 @@ than a clinically validated production system.
 - RDML and canonical CSV input support
 - Plate metadata joins tolerate common well-ID formats such as `A1` and `A01`
 - Supports both plain XML `.rdml` files and ZIP-container RDML archives from public example datasets
+- Captures per-cycle temperature when present and excludes rows explicitly marked as melt-stage observations
 - Deterministic forward-only Viterbi state decoding with locked model configuration
 - Ct estimation from adjusted amplification curves
 - QC rules for NTC contamination, replicate discordance, positive-control failure, late amplification, low-signal curves, and edge-well review

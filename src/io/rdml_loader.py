@@ -6,6 +6,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+DEFAULT_MELT_TEMP_C = 80.0
+
 
 def _local_name(tag: str) -> str:
     if "}" in tag:
@@ -194,6 +196,10 @@ def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
                     try:
                         cycle = int(float(cycle_value))
                         fluorescence = float(fluor_value)
+                        temperature_c = None
+                        tmp_value = _extract_value(adp, "tmp", "temperature")
+                        if tmp_value:
+                            temperature_c = float(tmp_value)
                     except ValueError:
                         malformed_reason_counts["type_cast_error"] += 1
                         continue
@@ -206,6 +212,8 @@ def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
                             "target_id": target_id,
                             "cycle": cycle,
                             "fluorescence": fluorescence,
+                            "temperature_c": temperature_c,
+                            "is_melt_stage": temperature_c is not None and temperature_c >= DEFAULT_MELT_TEMP_C,
                             "instrument": metadata["instrument"],
                         }
                     )
@@ -220,6 +228,7 @@ def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
             try:
                 cycle = int(float(cycle_value))
                 fluorescence = float(fluor_value)
+                temperature_c = None
             except ValueError:
                 malformed_reason_counts["type_cast_error"] += 1
                 continue
@@ -232,6 +241,8 @@ def load_rdml_with_report(path: str | Path) -> tuple[list[dict], dict]:
                     "target_id": target_id,
                     "cycle": cycle,
                     "fluorescence": fluorescence,
+                    "temperature_c": temperature_c,
+                    "is_melt_stage": False,
                     "instrument": metadata["instrument"],
                 }
             )

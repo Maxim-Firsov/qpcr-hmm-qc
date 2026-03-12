@@ -28,6 +28,10 @@ def normalize_rows(rows: Iterable[dict]) -> list[dict]:
         row["target_id"] = str(row.get("target_id", "") or "unknown_target")
         row["cycle"] = int(row["cycle"])
         row["fluorescence"] = float(row["fluorescence"])
+        if row.get("temperature_c") in ("", None):
+            row["temperature_c"] = None
+        else:
+            row["temperature_c"] = float(row["temperature_c"])
         row["is_melt_stage"] = bool(row.get("is_melt_stage", False))
         normalized.append(row)
     normalized.sort(

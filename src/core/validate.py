@@ -23,6 +23,13 @@ def validate_rows(rows: Iterable[dict], min_cycles: int = 25) -> tuple[list[dict
 
     staged = list(rows)
     for row in staged:
+        if bool(row.get("is_melt_stage", False)):
+            errors["melt_stage_excluded"] += 1
+            bad = dict(row)
+            bad["reject_reason"] = "melt_stage_excluded"
+            rejected.append(bad)
+            continue
+
         key = (row["run_id"], row["plate_id"], row["well_id"], row["target_id"])
         grouped_cycles[key].append(row["cycle"])
 

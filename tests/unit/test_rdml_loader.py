@@ -80,4 +80,5 @@ def test_load_rdml_reads_biorad_public_fixture():
 
     assert len(rows) == 2460
     assert rows[0]["well_id"].startswith("A")
+    assert "temperature_c" in rows[0]
     assert metadata["run_id"]
