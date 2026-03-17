@@ -59,6 +59,7 @@ def _estimate_ct(rows: list[dict], amplified: bool) -> float | None:
 def apply_qc_rules(
     inferred_rows: Iterable[dict],
     plate_meta: dict[tuple[str, str], dict] | None = None,
+    melt_summary: dict[tuple[str, str, str], dict] | None = None,
     confidence_threshold: float = 0.6,
     late_ct_threshold: float = LATE_CT_THRESHOLD,
     low_signal_threshold: float = LOW_SIGNAL_THRESHOLD,
@@ -67,6 +68,7 @@ def apply_qc_rules(
     replicate_ct_outlier_threshold: float = 1.5,
 ) -> list[dict]:
     plate_meta = plate_meta or {}
+    melt_summary = melt_summary or {}
     grouped: dict[tuple[str, str, str, str], list[dict]] = defaultdict(list)
     for row in inferred_rows:
         key = (row["run_id"], row["plate_id"], row["well_id"], row["target_id"])
@@ -116,6 +118,15 @@ def apply_qc_rules(
             flags.append("positive_control_failure")
         if expected_target_id and expected_target_id != target_id:
             flags.append("control_target_mismatch")
+        melt_info = melt_summary.get((plate_id, well_id, target_id), {})
+        if amplified and melt_info.get("status") == "review":
+            flags.append("melt_curve_review")
+            if "multiple_peaks" in melt_info.get("issues", []):
+                flags.append("melt_curve_multipeak")
+            if "missing_peak" in melt_info.get("issues", []):
+                flags.append("melt_curve_missing_peak")
+            if "low_resolution" in melt_info.get("issues", []):
+                flags.append("melt_curve_low_resolution")
         if is_edge_well(well_id, plate_shape) and ("late_amplification" in flags or "low_confidence" in flags):
             flags.append("edge_well_review")
 
@@ -201,6 +212,7 @@ def apply_qc_rules(
             or "low_signal_curve" in flags
             or "replicate_ct_spread" in flags
             or "replicate_ct_outlier" in flags
+            or "melt_curve_review" in flags
         ):
             call["qc_status"] = "review"
         else:

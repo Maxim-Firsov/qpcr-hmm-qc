@@ -317,3 +317,44 @@ def test_qc_rules_flags_control_target_mismatch():
     calls = apply_qc_rules(inferred, plate_meta=meta)
     assert "control_target_mismatch" in json.loads(calls[0]["qc_flags"])
     assert calls[0]["qc_status"] == "rerun"
+
+
+def test_qc_rules_flags_melt_curve_review():
+    inferred = [
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "C01",
+            "sample_id": "sample1",
+            "target_id": "t1",
+            "cycle": 1,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.02,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "C01",
+            "sample_id": "sample1",
+            "target_id": "t1",
+            "cycle": 2,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.30,
+        },
+    ]
+    melt_summary = {
+        ("p1", "C01", "t1"): {
+            "status": "review",
+            "issues": ["multiple_peaks"],
+            "peak_count": 2,
+            "temperature_span": 4.0,
+        }
+    }
+
+    calls = apply_qc_rules(inferred, plate_meta={}, melt_summary=melt_summary)
+    flags = json.loads(calls[0]["qc_flags"])
+    assert "melt_curve_review" in flags
+    assert "melt_curve_multipeak" in flags
+    assert calls[0]["qc_status"] == "review"

@@ -57,6 +57,7 @@ Parser path to canonical schema:
 2. `src/core/normalize.py` enforces normalized IDs and typed cycle/fluorescence fields.
 3. `src/core/validate.py` applies schema/well/cycle guards, excludes rows marked as melt stage, and produces rejection summaries.
 4. `src/core/features.py` resolves assay/instrument-aware normalization profiles before derivative feature generation.
+5. `src/core/melt_qc.py` summarizes excluded melt-stage rows into specificity-review signals recorded in metadata and QC flags.
 
 `--plate-meta-csv` optional columns:
 
@@ -95,3 +96,5 @@ Output contract is enforced by `tests/contract/test_output_contract.py`.
 - `normalization.config_sha256`
 - `control_map.config_path`
 - `control_map.config_sha256`
+- `melt_qc.well_target_count`
+- `melt_qc.review_count`

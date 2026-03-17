@@ -16,6 +16,7 @@ from src.core.aggregate import summarize_plates
 from src.core.control_map import build_plate_meta, load_control_map
 from src.core.features import build_features
 from src.core.hmm_infer import infer_state_paths, load_model_config
+from src.core.melt_qc import analyze_melt_curves
 from src.core.normalization_profiles import load_normalization_profiles
 from src.core.normalize import normalize_rows
 from src.core.qc_rules import apply_qc_rules
@@ -151,6 +152,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
 
     stage_started = time.perf_counter()
     normalized = normalize_rows(raw)
+    melt_summary = analyze_melt_curves(normalized)
     stage_timings["normalize_seconds"] = round(time.perf_counter() - stage_started, 6)
 
     stage_started = time.perf_counter()
@@ -181,6 +183,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     well_calls = apply_qc_rules(
         inferred,
         plate_meta=plate_meta,
+        melt_summary=melt_summary,
         confidence_threshold=float(getattr(args, "confidence_threshold", 0.6)),
         late_ct_threshold=float(getattr(args, "late_ct_threshold", 35.0)),
         low_signal_threshold=float(getattr(args, "low_signal_threshold", 0.15)),
@@ -273,6 +276,10 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         "control_map": {
             "config_path": control_map["_path"] if control_map else "",
             "config_sha256": control_map["_sha256"] if control_map else "",
+        },
+        "melt_qc": {
+            "well_target_count": len(melt_summary),
+            "review_count": sum(1 for item in melt_summary.values() if item.get("status") == "review"),
         },
         # Validation summary is preserved in metadata so rejected-row reasons remain traceable.
         "data_validation_summary": validation_summary,

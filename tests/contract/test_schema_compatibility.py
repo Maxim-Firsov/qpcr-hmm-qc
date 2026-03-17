@@ -75,6 +75,7 @@ def test_v010_output_schema_compatibility(tmp_path):
         "input_hashes",
         "input_snapshot_date",
         "inputs",
+        "melt_qc",
         "model_config",
         "normalization",
         "peak_memory_mb",
@@ -96,4 +97,8 @@ def test_v010_output_schema_compatibility(tmp_path):
     assert sorted(metadata["control_map"].keys()) == [
         "config_path",
         "config_sha256",
+    ]
+    assert sorted(metadata["melt_qc"].keys()) == [
+        "review_count",
+        "well_target_count",
     ]

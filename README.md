@@ -120,6 +120,7 @@ Each run writes:
 - QC thresholds used for the run
 - normalization config path and hash
 - control-map config path and hash
+- melt-QC coverage counts and review counts
 - per-stage timings
 - total runtime
 - peak traced memory
@@ -177,6 +178,7 @@ The full local test suite currently runs in about three seconds.
 - Deterministic outputs are favored over opaque model behavior
 - Public-fixture coverage improves parser and throughput confidence, but does not substitute for assay-specific validation
 - Assay- and instrument-aware normalization profiles are deterministic config, not biological calibration
+- Melt-curve review logic is deterministic heuristic QC, not a substitute for assay-specific specificity validation
 
 ## License
 

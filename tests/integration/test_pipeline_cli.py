@@ -88,6 +88,7 @@ def test_pipeline_cli_mode_writes_all_outputs(tmp_path):
     assert metadata["normalization"]["requested_profile"] == "auto"
     assert metadata["normalization"]["config_sha256"]
     assert metadata["control_map"]["config_path"] == ""
+    assert metadata["melt_qc"]["well_target_count"] == 0
     assert metadata["qc_thresholds"]["replicate_ct_spread_threshold"] == 2.0
     assert metadata["qc_thresholds"]["replicate_ct_outlier_threshold"] == 1.5
 
