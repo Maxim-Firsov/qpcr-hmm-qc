@@ -201,3 +201,119 @@ def test_qc_rules_accept_overridden_thresholds():
     flags = json.loads(calls[0]["qc_flags"])
     assert "low_signal_curve" in flags
     assert "late_amplification" in flags
+
+
+def test_qc_rules_flags_replicate_ct_outlier_and_spread():
+    inferred = [
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B01",
+            "sample_id": "rep1",
+            "target_id": "t1",
+            "cycle": 10,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.02,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B01",
+            "sample_id": "rep1",
+            "target_id": "t1",
+            "cycle": 11,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.30,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B02",
+            "sample_id": "rep2",
+            "target_id": "t1",
+            "cycle": 10,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.02,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B02",
+            "sample_id": "rep2",
+            "target_id": "t1",
+            "cycle": 11,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.31,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B03",
+            "sample_id": "rep3",
+            "target_id": "t1",
+            "cycle": 15,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.02,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "B03",
+            "sample_id": "rep3",
+            "target_id": "t1",
+            "cycle": 16,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.32,
+        },
+    ]
+    meta = {
+        ("p1", "B01"): {"control_type": "sample", "replicate_group": "rg1"},
+        ("p1", "B02"): {"control_type": "sample", "replicate_group": "rg1"},
+        ("p1", "B03"): {"control_type": "sample", "replicate_group": "rg1"},
+    }
+
+    calls = apply_qc_rules(inferred, plate_meta=meta)
+
+    flagged = {call["well_id"]: json.loads(call["qc_flags"]) for call in calls}
+    assert "replicate_ct_outlier" in flagged["B03"]
+    assert "replicate_ct_spread" in flagged["B01"]
+    assert "replicate_ct_spread" in flagged["B02"]
+    assert "replicate_ct_spread" in flagged["B03"]
+
+
+def test_qc_rules_flags_control_target_mismatch():
+    inferred = [
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "A01",
+            "sample_id": "pos1",
+            "target_id": "observed_target",
+            "cycle": 1,
+            "state": "baseline_noise",
+            "state_confidence": 0.95,
+            "f_adj": 0.01,
+        },
+        {
+            "run_id": "r1",
+            "plate_id": "p1",
+            "well_id": "A01",
+            "sample_id": "pos1",
+            "target_id": "observed_target",
+            "cycle": 2,
+            "state": "exponential_amplification",
+            "state_confidence": 0.95,
+            "f_adj": 0.20,
+        },
+    ]
+    meta = {("p1", "A01"): {"control_type": "positive_control", "expected_target_id": "expected_target"}}
+
+    calls = apply_qc_rules(inferred, plate_meta=meta)
+    assert "control_target_mismatch" in json.loads(calls[0]["qc_flags"])
+    assert calls[0]["qc_status"] == "rerun"

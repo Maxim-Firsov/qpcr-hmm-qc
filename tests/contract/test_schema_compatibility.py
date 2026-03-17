@@ -69,6 +69,7 @@ def test_v010_output_schema_compatibility(tmp_path):
 
     metadata = json.loads((outdir / "run_metadata.json").read_text(encoding="utf-8"))
     assert sorted(metadata.keys()) == [
+        "control_map",
         "data_validation_summary",
         "execution_mode",
         "input_hashes",
@@ -91,4 +92,8 @@ def test_v010_output_schema_compatibility(tmp_path):
         "config_path",
         "config_sha256",
         "requested_profile",
+    ]
+    assert sorted(metadata["control_map"].keys()) == [
+        "config_path",
+        "config_sha256",
     ]

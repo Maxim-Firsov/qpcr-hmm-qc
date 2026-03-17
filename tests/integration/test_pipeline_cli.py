@@ -87,10 +87,68 @@ def test_pipeline_cli_mode_writes_all_outputs(tmp_path):
     assert metadata["input_snapshot_date"] != "1970-01-01"
     assert metadata["normalization"]["requested_profile"] == "auto"
     assert metadata["normalization"]["config_sha256"]
+    assert metadata["control_map"]["config_path"] == ""
+    assert metadata["qc_thresholds"]["replicate_ct_spread_threshold"] == 2.0
+    assert metadata["qc_thresholds"]["replicate_ct_outlier_threshold"] == 1.5
 
     run_summary = json.loads((outdir / "summary.json").read_text(encoding="utf-8"))
     assert run_summary["counts"]["well_calls"] == 1
     assert run_summary["global_counts"]["pass"] >= 0
+
+
+def test_pipeline_control_map_config_marks_controls(tmp_path):
+    curve_csv = tmp_path / "curves.csv"
+    with curve_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["run_id", "plate_id", "well_id", "sample_id", "target_id", "cycle", "fluorescence"],
+        )
+        writer.writeheader()
+        writer.writerows(
+            [
+                {"run_id": "r1", "plate_id": "p1", "well_id": "A1", "sample_id": "ctrl", "target_id": "assay_a", "cycle": 1, "fluorescence": 0.1},
+                {"run_id": "r1", "plate_id": "p1", "well_id": "A1", "sample_id": "ctrl", "target_id": "assay_a", "cycle": 2, "fluorescence": 0.5},
+                {"run_id": "r1", "plate_id": "p1", "well_id": "A1", "sample_id": "ctrl", "target_id": "assay_a", "cycle": 3, "fluorescence": 1.0},
+            ]
+        )
+
+    control_map = tmp_path / "control_map.json"
+    control_map.write_text(
+        json.dumps(
+            {
+                "rules": [
+                    {
+                        "plate_id": "*",
+                        "well_ids": ["A01"],
+                        "control_type": "positive_control",
+                        "expected_target_id": "assay_a",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    outdir = tmp_path / "out"
+    run_pipeline(
+        Namespace(
+            curve_csv=str(curve_csv),
+            rdml=None,
+            plate_meta_csv=None,
+            control_map_config=str(control_map),
+            outdir=str(outdir),
+            min_cycles=3,
+            allow_empty_run=False,
+            plate_schema="auto",
+        )
+    )
+
+    with (outdir / "well_calls.csv").open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["control_type"] == "positive_control"
+
+    metadata = json.loads((outdir / "run_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["control_map"]["config_sha256"]
 
 
 def test_pipeline_raises_when_all_rows_are_rejected(tmp_path):

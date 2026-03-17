@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from statistics import mean
+from statistics import mean, median
 from typing import Iterable
 
 from src.core.plate_layout import is_edge_well, resolve_plate_shape
@@ -63,6 +63,8 @@ def apply_qc_rules(
     late_ct_threshold: float = LATE_CT_THRESHOLD,
     low_signal_threshold: float = LOW_SIGNAL_THRESHOLD,
     plate_schema: str = "auto",
+    replicate_ct_spread_threshold: float = 2.0,
+    replicate_ct_outlier_threshold: float = 1.5,
 ) -> list[dict]:
     plate_meta = plate_meta or {}
     grouped: dict[tuple[str, str, str, str], list[dict]] = defaultdict(list)
@@ -87,6 +89,7 @@ def apply_qc_rules(
         avg_conf = mean(confidences) if confidences else 0.0
         metadata = plate_meta.get((plate_id, well_id), {})
         control_type = metadata.get("control_type", "sample")
+        expected_target_id = str(metadata.get("expected_target_id", "")).strip()
         sample_id = rows[0].get("sample_id", "unknown_sample")
         max_signal = max(float(row.get("f_adj", 0.0)) for row in rows)
 
@@ -111,6 +114,8 @@ def apply_qc_rules(
             flags.append("late_amplification")
         if control_type == "positive_control" and call_label != "amplified":
             flags.append("positive_control_failure")
+        if expected_target_id and expected_target_id != target_id:
+            flags.append("control_target_mismatch")
         if is_edge_well(well_id, plate_shape) and ("late_amplification" in flags or "low_confidence" in flags):
             flags.append("edge_well_review")
 
@@ -154,13 +159,31 @@ def apply_qc_rules(
 
     for _, group in replicate_groups.items():
         labels = {call["call_label"] for call in group}
-        if len(group) < 2 or len(labels) <= 1:
-            continue
-        for call in group:
-            flags = json.loads(call["qc_flags"])
-            if "replicate_discordance" not in flags:
-                flags.append("replicate_discordance")
-            call["qc_flags"] = json.dumps(flags)
+        if len(group) >= 2 and len(labels) > 1:
+            for call in group:
+                flags = json.loads(call["qc_flags"])
+                if "replicate_discordance" not in flags:
+                    flags.append("replicate_discordance")
+                call["qc_flags"] = json.dumps(flags)
+
+        ct_calls = [call for call in group if call.get("ct_estimate") is not None]
+        if len(ct_calls) >= 2:
+            ct_values = [float(call["ct_estimate"]) for call in ct_calls]
+            if (max(ct_values) - min(ct_values)) > replicate_ct_spread_threshold:
+                for call in ct_calls:
+                    flags = json.loads(call["qc_flags"])
+                    if "replicate_ct_spread" not in flags:
+                        flags.append("replicate_ct_spread")
+                    call["qc_flags"] = json.dumps(flags)
+        if len(ct_calls) >= 3:
+            median_ct = median(float(call["ct_estimate"]) for call in ct_calls)
+            for call in ct_calls:
+                if abs(float(call["ct_estimate"]) - median_ct) <= replicate_ct_outlier_threshold:
+                    continue
+                flags = json.loads(call["qc_flags"])
+                if "replicate_ct_outlier" not in flags:
+                    flags.append("replicate_ct_outlier")
+                call["qc_flags"] = json.dumps(flags)
 
     for call in calls:
         flags = json.loads(call["qc_flags"])
@@ -168,9 +191,17 @@ def apply_qc_rules(
             "ntc_contamination" in flags
             or "replicate_discordance" in flags
             or "positive_control_failure" in flags
+            or "control_target_mismatch" in flags
         ):
             call["qc_status"] = "rerun"
-        elif "late_amplification" in flags or "low_confidence" in flags or "edge_well_review" in flags or "low_signal_curve" in flags:
+        elif (
+            "late_amplification" in flags
+            or "low_confidence" in flags
+            or "edge_well_review" in flags
+            or "low_signal_curve" in flags
+            or "replicate_ct_spread" in flags
+            or "replicate_ct_outlier" in flags
+        ):
             call["qc_status"] = "review"
         else:
             call["qc_status"] = "pass"

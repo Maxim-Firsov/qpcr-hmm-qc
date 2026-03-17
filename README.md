@@ -83,6 +83,12 @@ curve_csv,data\fixtures\q4_curves.csv,outputs\batch_run_001,3,96,false,data\fixt
 rdml,data\raw\stepone_std.rdml,outputs\batch_run_002,25,96,false,
 ```
 
+Control-map driven layouts:
+
+```powershell
+python -m src.cli --curve-csv data\fixtures\q4_curves.csv --control-map-config config\control_map.example.json --outdir outputs\control_map_run --min-cycles 3
+```
+
 Workflow gating:
 
 ```powershell
@@ -113,6 +119,7 @@ Each run writes:
 - structured warnings and warning codes
 - QC thresholds used for the run
 - normalization config path and hash
+- control-map config path and hash
 - per-stage timings
 - total runtime
 - peak traced memory

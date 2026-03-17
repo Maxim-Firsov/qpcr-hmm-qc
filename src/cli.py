@@ -13,6 +13,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 
 from src.core.aggregate import summarize_plates
+from src.core.control_map import build_plate_meta, load_control_map
 from src.core.features import build_features
 from src.core.hmm_infer import infer_state_paths, load_model_config
 from src.core.normalization_profiles import load_normalization_profiles
@@ -61,11 +62,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--rdml", required=False, help="RDML file or directory path.")
     mode.add_argument("--batch-manifest", required=False, help="CSV manifest describing multiple pipeline runs.")
     parser.add_argument("--plate-meta-csv", required=False, help="Optional plate metadata CSV path.")
+    parser.add_argument("--control-map-config", required=False, help="Optional JSON control-map config for assay-specific layouts.")
     parser.add_argument("--outdir", required=True, help="Output directory.")
     parser.add_argument("--min-cycles", type=int, default=3, help="Minimum cycles per well-target.")
     parser.add_argument("--confidence-threshold", type=float, default=0.6, help="Minimum mean state confidence before a call is downgraded to review.")
     parser.add_argument("--late-ct-threshold", type=float, default=35.0, help="Ct threshold at or above which amplification is marked late.")
     parser.add_argument("--low-signal-threshold", type=float, default=0.15, help="Adjusted fluorescence ceiling below which a trace is marked low signal.")
+    parser.add_argument("--replicate-ct-spread-threshold", type=float, default=2.0, help="Ct spread above which replicate groups are marked review.")
+    parser.add_argument("--replicate-ct-outlier-threshold", type=float, default=1.5, help="Ct distance from replicate-group median above which an amplified replicate is marked as an outlier.")
     parser.add_argument(
         "--plate-schema",
         choices=["auto", "96", "384"],
@@ -172,6 +176,8 @@ def run_pipeline(args: argparse.Namespace) -> dict:
 
     stage_started = time.perf_counter()
     plate_meta = load_plate_meta_csv(args.plate_meta_csv) if args.plate_meta_csv else {}
+    control_map = load_control_map(args.control_map_config) if getattr(args, "control_map_config", None) else None
+    plate_meta = build_plate_meta(plate_meta, inferred_rows=inferred, control_map=control_map)
     well_calls = apply_qc_rules(
         inferred,
         plate_meta=plate_meta,
@@ -179,6 +185,8 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         late_ct_threshold=float(getattr(args, "late_ct_threshold", 35.0)),
         low_signal_threshold=float(getattr(args, "low_signal_threshold", 0.15)),
         plate_schema=args.plate_schema,
+        replicate_ct_spread_threshold=float(getattr(args, "replicate_ct_spread_threshold", 2.0)),
+        replicate_ct_outlier_threshold=float(getattr(args, "replicate_ct_outlier_threshold", 1.5)),
     )
     plate_summary = summarize_plates(well_calls, generated_at_utc=generated_at_utc, plate_schema=args.plate_schema)
     stage_timings["qc_seconds"] = round(time.perf_counter() - stage_started, 6)
@@ -234,16 +242,20 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "confidence_threshold": float(getattr(args, "confidence_threshold", 0.6)),
             "late_ct_threshold": float(getattr(args, "late_ct_threshold", 35.0)),
             "low_signal_threshold": float(getattr(args, "low_signal_threshold", 0.15)),
+            "replicate_ct_spread_threshold": float(getattr(args, "replicate_ct_spread_threshold", 2.0)),
+            "replicate_ct_outlier_threshold": float(getattr(args, "replicate_ct_outlier_threshold", 1.5)),
         },
         "inputs": {
             "curve_csv": str(curve_csv_arg or ""),
             "rdml": str(rdml_arg or ""),
             "plate_meta_csv": str(args.plate_meta_csv or ""),
+            "control_map_config": str(getattr(args, "control_map_config", "") or ""),
         },
         "input_hashes": {
             "curve_csv_sha256": _hash_input_path(str(curve_csv_arg or "")),
             "rdml_sha256": _hash_input_path(str(rdml_arg or "")),
             "plate_meta_csv_sha256": _hash_input_path(str(args.plate_meta_csv or "")),
+            "control_map_config_sha256": _hash_input_path(str(getattr(args, "control_map_config", "") or "")),
         },
         "input_snapshot_date": generated_at_utc[:10],
         "record_counts": {
@@ -257,6 +269,10 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "requested_profile": requested_profile,
             "config_path": normalization_profiles["_path"],
             "config_sha256": normalization_profiles["_sha256"],
+        },
+        "control_map": {
+            "config_path": control_map["_path"] if control_map else "",
+            "config_sha256": control_map["_sha256"] if control_map else "",
         },
         # Validation summary is preserved in metadata so rejected-row reasons remain traceable.
         "data_validation_summary": validation_summary,
@@ -336,10 +352,13 @@ def run_batch_manifest(args: argparse.Namespace) -> dict:
             rdml=row.get("input_path") if input_mode == "rdml" else None,
             curve_csv=row.get("input_path") if input_mode == "curve_csv" else None,
             plate_meta_csv=row.get("plate_meta_csv") or None,
+            control_map_config=row.get("control_map_config") or args.control_map_config,
             outdir=row.get("outdir") or str(Path(args.outdir) / f"batch_run_{index:03d}"),
             min_cycles=int(row.get("min_cycles") or args.min_cycles),
             allow_empty_run=str(row.get("allow_empty_run") or "").strip().lower() in {"1", "true", "yes"},
             plate_schema=(row.get("plate_schema") or args.plate_schema or "auto"),
+            replicate_ct_spread_threshold=float(row.get("replicate_ct_spread_threshold") or args.replicate_ct_spread_threshold),
+            replicate_ct_outlier_threshold=float(row.get("replicate_ct_outlier_threshold") or args.replicate_ct_outlier_threshold),
             normalization_profile=row.get("normalization_profile") or args.normalization_profile,
             normalization_config=row.get("normalization_config") or args.normalization_config,
         )

@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "plate_id": "*",
+      "well_ids": ["A01", "A12"],
+      "control_type": "positive_control",
+      "expected_target_id": "target1"
+    },
+    {
+      "plate_id": "*",
+      "well_ids": ["H11", "H12"],
+      "control_type": "ntc",
+      "expected_target_id": "target1"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ Primary mode (production path):
 Secondary mode (adapter/testing path):
 
 - `--curve-csv <path>`
+- `--control-map-config <path>` optional JSON rules for assay/control layouts
 
 Batch mode:
 
@@ -30,6 +31,8 @@ CLI QC threshold overrides:
 - `--confidence-threshold <float>`
 - `--late-ct-threshold <float>`
 - `--low-signal-threshold <float>`
+- `--replicate-ct-spread-threshold <float>`
+- `--replicate-ct-outlier-threshold <float>`
 - `--normalization-profile <name|auto>`
 - `--normalization-config <path>`
 
@@ -58,6 +61,19 @@ Parser path to canonical schema:
 `--plate-meta-csv` optional columns:
 
 - required: `plate_id`, `well_id`, `control_type`
+- optional: `expected_target_id`, `replicate_group`, `sample_group`
+
+`--control-map-config` JSON shape:
+
+- top-level key: `rules`
+- each rule can include:
+  - `plate_id` (`*` allowed)
+  - `target_id` (`*` allowed)
+  - `well_ids` (list)
+  - `control_type`
+  - `expected_target_id`
+  - `replicate_group`
+  - `sample_group`
 
 ## Outputs
 
@@ -77,3 +93,5 @@ Output contract is enforced by `tests/contract/test_output_contract.py`.
 - `normalization.requested_profile`
 - `normalization.config_path`
 - `normalization.config_sha256`
+- `control_map.config_path`
+- `control_map.config_sha256`
