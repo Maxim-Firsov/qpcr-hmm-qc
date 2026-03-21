@@ -8,7 +8,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from src.cli import run_pipeline
-from src.export.writers import write_json
+from src.export.writers import write_csv, write_json
+
+RERUN_FIELDS = [
+    "plate_id",
+    "well_id",
+    "target_id",
+    "sample_id",
+    "rerun_reason",
+    "evidence_score",
+    "recommended_action",
+]
 
 
 def _timestamp() -> str:
@@ -61,8 +71,8 @@ def _write_failure_outputs(run_record: dict, message: str) -> None:
         "artifact_inventory": {
             "summary.json": {"generated": True, "path": str(run_dir / "summary.json"), "reason": "failure_placeholder"},
             "run_metadata.json": {"generated": True, "path": str(run_dir / "run_metadata.json"), "reason": "failure_placeholder"},
-            "plate_qc_summary.json": {"generated": False, "path": str(run_dir / "plate_qc_summary.json"), "reason": "analysis_failed"},
-            "rerun_manifest.csv": {"generated": False, "path": str(run_dir / "rerun_manifest.csv"), "reason": "analysis_failed"},
+            "plate_qc_summary.json": {"generated": True, "path": str(run_dir / "plate_qc_summary.json"), "reason": "failure_placeholder"},
+            "rerun_manifest.csv": {"generated": True, "path": str(run_dir / "rerun_manifest.csv"), "reason": "failure_placeholder"},
             "well_calls.csv": {"generated": False, "path": str(run_dir / "well_calls.csv"), "reason": "analysis_failed"},
             "report.html": {"generated": False, "path": str(run_dir / "report.html"), "reason": "analysis_failed"},
         },
@@ -102,6 +112,14 @@ def _write_failure_outputs(run_record: dict, message: str) -> None:
             "replicate_ct_outlier_threshold": run_record["replicate_ct_outlier_threshold"],
         },
     }
+    plate_qc_summary = {
+        "schema_version": "v0.1.0",
+        "generated_at_utc": summary["generated_at_utc"],
+        "plates": [],
+        "global_counts": {"pass": 0, "review": 0, "rerun": 0},
+    }
+    write_csv(run_dir / "rerun_manifest.csv", [], RERUN_FIELDS)
+    write_json(run_dir / "plate_qc_summary.json", plate_qc_summary)
     write_json(run_dir / "summary.json", summary)
     write_json(run_dir / "run_metadata.json", metadata)
 

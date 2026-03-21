@@ -170,3 +170,62 @@ def test_snakemake_rerun_restores_tracked_compact_outputs(tmp_path):
     rerun_queue = (batch_out / "rerun_queue.csv").read_text(encoding="utf-8")
     assert "manual_tamper" not in rerun_queue
     assert "bogus_sample" not in rerun_queue
+
+
+def test_snakemake_preserves_failed_run_placeholders_for_analysis_errors(tmp_path):
+    repo_root = Path(__file__).resolve().parents[2]
+    short_curve = tmp_path / "short.csv"
+    with short_curve.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["run_id", "plate_id", "well_id", "sample_id", "target_id", "cycle", "fluorescence"],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "run_id": "failed_run",
+                "plate_id": "p1",
+                "well_id": "A1",
+                "sample_id": "sample1",
+                "target_id": "target1",
+                "cycle": 1,
+                "fluorescence": 0.1,
+            }
+        )
+
+    manifest = tmp_path / "manifest.tsv"
+    manifest.write_text(
+        "run_id\tinput_mode\tinput_path\tmin_cycles\tplate_schema\tallow_empty_run\n"
+        f"failed_run\tcurve_csv\t{short_curve}\t3\tauto\tfalse\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "batch_config.yaml"
+    config.write_text(
+        f"manifest: {manifest.as_posix()}\n"
+        f"output_root: {(tmp_path / 'batch_outputs').as_posix()}\n"
+        "artifact_profile: review\n",
+        encoding="utf-8",
+    )
+
+    completed = _run_snakemake(repo_root, config)
+    assert completed.returncode == 0, completed.stderr
+
+    batch_out = tmp_path / "batch_outputs"
+    run_dir = batch_out / "runs" / "failed_run"
+    for expected in [
+        run_dir / "summary.json",
+        run_dir / "run_metadata.json",
+        run_dir / "plate_qc_summary.json",
+        run_dir / "rerun_manifest.csv",
+        run_dir / "workflow_status.json",
+    ]:
+        assert expected.exists()
+
+    batch_master = json.loads((batch_out / "batch_master.json").read_text(encoding="utf-8"))
+    failed_record = batch_master["runs"][0]
+    assert failed_record["execution_status"] == "failed"
+    assert failed_record["run_status"] == "unavailable"
+
+    gate_status = json.loads((batch_out / "batch_gate_status.json").read_text(encoding="utf-8"))
+    assert gate_status["release_status"] == "block"
+    assert "execution_failures_present" in gate_status["blocking_reasons"]
