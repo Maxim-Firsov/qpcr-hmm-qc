@@ -27,6 +27,16 @@ def _write_curve_csv(path: Path, run_id: str, terminal_value: float) -> None:
         )
 
 
+def _run_snakemake(repo_root: Path, config: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, "-m", "snakemake", "--snakefile", str(repo_root / "Snakefile"), "--cores", "1", "--configfile", str(config)],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def test_snakemake_batch_generates_handoff_packet(tmp_path):
     repo_root = Path(__file__).resolve().parents[2]
     pass_curve = tmp_path / "pass.csv"
@@ -58,13 +68,7 @@ def test_snakemake_batch_generates_handoff_packet(tmp_path):
         encoding="utf-8",
     )
 
-    completed = subprocess.run(
-        [sys.executable, "-m", "snakemake", "--snakefile", str(repo_root / "Snakefile"), "--cores", "1", "--configfile", str(config)],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = _run_snakemake(repo_root, config)
 
     assert completed.returncode == 0, completed.stderr
     batch_out = tmp_path / "batch_outputs"
@@ -98,13 +102,7 @@ def test_snakemake_invalid_manifest_writes_validation_artifact_and_stops(tmp_pat
         encoding="utf-8",
     )
 
-    completed = subprocess.run(
-        [sys.executable, "-m", "snakemake", "--snakefile", str(repo_root / "Snakefile"), "--cores", "1", "--configfile", str(config)],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = _run_snakemake(repo_root, config)
 
     assert completed.returncode != 0
     validated_manifest = tmp_path / "batch_outputs" / "_workflow" / "validated_manifest.json"
@@ -113,3 +111,62 @@ def test_snakemake_invalid_manifest_writes_validation_artifact_and_stops(tmp_pat
     assert payload["validation_status"] == "invalid"
     assert payload["errors"]
     assert not any((tmp_path / "batch_outputs" / "runs").glob("*"))
+
+
+def test_snakemake_rerun_restores_tracked_compact_outputs(tmp_path):
+    repo_root = Path(__file__).resolve().parents[2]
+    pass_curve = tmp_path / "pass.csv"
+    review_curve = tmp_path / "review.csv"
+    _write_curve_csv(pass_curve, "pass_run", 1.0)
+    _write_curve_csv(review_curve, "review_run", 0.3)
+
+    manifest = tmp_path / "manifest.tsv"
+    manifest.write_text(
+        "run_id\tinput_mode\tinput_path\tmin_cycles\tplate_schema\tallow_empty_run\n"
+        f"pass_run\tcurve_csv\t{pass_curve}\t3\tauto\tfalse\n"
+        f"review_run\tcurve_csv\t{review_curve}\t3\tauto\tfalse\n",
+        encoding="utf-8",
+    )
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(
+        "max_failed_runs_for_release: 0\n"
+        "max_rerun_wells_for_release: 0\n"
+        "max_review_wells_for_release: 0\n"
+        "max_review_runs_for_release: 0\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "batch_config.yaml"
+    config.write_text(
+        f"manifest: {manifest.as_posix()}\n"
+        f"output_root: {(tmp_path / 'batch_outputs').as_posix()}\n"
+        "artifact_profile: review\n"
+        f"gate_config: {policy.as_posix()}\n",
+        encoding="utf-8",
+    )
+
+    first_run = _run_snakemake(repo_root, config)
+    assert first_run.returncode == 0, first_run.stderr
+
+    batch_out = tmp_path / "batch_outputs"
+    tracked_files = [
+        batch_out / "runs" / "review_run" / "run_metadata.json",
+        batch_out / "runs" / "review_run" / "plate_qc_summary.json",
+    ]
+    rerun_manifest = batch_out / "runs" / "review_run" / "rerun_manifest.csv"
+    rerun_manifest.write_text(
+        "plate_id,well_id,target_id,sample_id,rerun_reason,evidence_score,recommended_action\n"
+        "p1,Z99,bogus,bogus_sample,manual_tamper,1.0,do_not_keep\n",
+        encoding="utf-8",
+    )
+    for tracked_file in tracked_files:
+        tracked_file.unlink()
+
+    second_run = _run_snakemake(repo_root, config)
+    assert second_run.returncode == 0, second_run.stderr
+    assert rerun_manifest.exists()
+    for tracked_file in tracked_files:
+        assert tracked_file.exists()
+
+    rerun_queue = (batch_out / "rerun_queue.csv").read_text(encoding="utf-8")
+    assert "manual_tamper" not in rerun_queue
+    assert "bogus_sample" not in rerun_queue

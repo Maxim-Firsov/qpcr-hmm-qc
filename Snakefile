@@ -12,6 +12,12 @@ MANIFEST_OK = WORKFLOW_ROOT / "manifest.ok"
 GATE_CONFIG = Path(config.get("gate_config", "workflow/config/batch_release_policy.yaml")).resolve()
 
 RUN_IDS = planned_run_ids(config["manifest"])
+RUN_ROW_OUTPUTS = expand(str(RUN_ROWS_DIR / "{run_id}.json"), run_id=RUN_IDS)
+RUN_SUMMARY_OUTPUTS = expand(str(OUTPUT_ROOT / "runs/{run_id}/summary.json"), run_id=RUN_IDS)
+RUN_STATUS_OUTPUTS = expand(str(OUTPUT_ROOT / "runs/{run_id}/workflow_status.json"), run_id=RUN_IDS)
+RUN_RERUN_OUTPUTS = expand(str(OUTPUT_ROOT / "runs/{run_id}/rerun_manifest.csv"), run_id=RUN_IDS)
+RUN_METADATA_OUTPUTS = expand(str(OUTPUT_ROOT / "runs/{run_id}/run_metadata.json"), run_id=RUN_IDS)
+RUN_PLATE_QC_OUTPUTS = expand(str(OUTPUT_ROOT / "runs/{run_id}/plate_qc_summary.json"), run_id=RUN_IDS)
 
 
 rule all:
@@ -22,6 +28,11 @@ rule all:
         str(OUTPUT_ROOT / "failure_reason_counts.tsv"),
         str(OUTPUT_ROOT / "batch_gate_status.json"),
         str(OUTPUT_ROOT / "batch_report.md"),
+        RUN_SUMMARY_OUTPUTS,
+        RUN_STATUS_OUTPUTS,
+        RUN_RERUN_OUTPUTS,
+        RUN_METADATA_OUTPUTS,
+        RUN_PLATE_QC_OUTPUTS,
 
 
 rule validate_manifest:
@@ -65,6 +76,9 @@ rule run_manifest_row:
     output:
         summary=str(OUTPUT_ROOT / "runs/{run_id}/summary.json"),
         workflow_status=str(OUTPUT_ROOT / "runs/{run_id}/workflow_status.json"),
+        rerun_manifest=str(OUTPUT_ROOT / "runs/{run_id}/rerun_manifest.csv"),
+        run_metadata=str(OUTPUT_ROOT / "runs/{run_id}/run_metadata.json"),
+        plate_qc_summary=str(OUTPUT_ROOT / "runs/{run_id}/plate_qc_summary.json"),
     shell:
         "python -m src.workflow.batch_runner --run-record \"{input.run_row}\""
 
@@ -73,9 +87,10 @@ rule aggregate_batch:
     input:
         validated_manifest=str(VALIDATED_MANIFEST),
         manifest_ok=str(MANIFEST_OK),
-        run_rows=expand(str(RUN_ROWS_DIR / "{run_id}.json"), run_id=RUN_IDS),
-        summaries=expand(str(OUTPUT_ROOT / "runs/{run_id}/summary.json"), run_id=RUN_IDS),
-        workflow_statuses=expand(str(OUTPUT_ROOT / "runs/{run_id}/workflow_status.json"), run_id=RUN_IDS),
+        run_rows=RUN_ROW_OUTPUTS,
+        summaries=RUN_SUMMARY_OUTPUTS,
+        workflow_statuses=RUN_STATUS_OUTPUTS,
+        rerun_manifests=RUN_RERUN_OUTPUTS,
     output:
         batch_master_json=str(OUTPUT_ROOT / "batch_master.json"),
         batch_master_tsv=str(OUTPUT_ROOT / "batch_master.tsv"),
