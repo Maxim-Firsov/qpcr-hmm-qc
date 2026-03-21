@@ -20,6 +20,11 @@ def _load_manifest(path: str | Path) -> dict:
         return json.load(handle)
 
 
+def _load_run_record(path: str | Path) -> dict:
+    with Path(path).open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def _write_failure_outputs(run_record: dict, message: str) -> None:
     run_dir = Path(run_record["run_dir"])
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -160,12 +165,71 @@ def execute_run(validated_manifest_path: str | Path, run_id: str) -> dict:
         return workflow_status
 
 
+def execute_run_record(run_record_path: str | Path) -> dict:
+    run_record = _load_run_record(run_record_path)
+    run_dir = Path(run_record["run_dir"])
+    run_dir.mkdir(parents=True, exist_ok=True)
+    started_at = _timestamp()
+    status_path = run_dir / "workflow_status.json"
+    try:
+        result = run_pipeline(
+            argparse.Namespace(
+                run_id=run_record["run_id"],
+                rdml=run_record["input_path"] if run_record["input_mode"] == "rdml" else None,
+                curve_csv=run_record["input_path"] if run_record["input_mode"] == "curve_csv" else None,
+                plate_meta_csv=run_record["plate_meta_csv"] or None,
+                control_map_config=run_record["control_map_config"] or None,
+                outdir=str(run_dir),
+                min_cycles=run_record["min_cycles"],
+                allow_empty_run=run_record["allow_empty_run"],
+                plate_schema=run_record["plate_schema"],
+                confidence_threshold=run_record["confidence_threshold"],
+                late_ct_threshold=run_record["late_ct_threshold"],
+                low_signal_threshold=run_record["low_signal_threshold"],
+                replicate_ct_spread_threshold=run_record["replicate_ct_spread_threshold"],
+                replicate_ct_outlier_threshold=run_record["replicate_ct_outlier_threshold"],
+                normalization_profile=run_record["normalization_profile"],
+                normalization_config=run_record["normalization_config"] or None,
+                artifact_profile=run_record["artifact_profile"],
+            )
+        )
+        workflow_status = {
+            "run_id": run_record["run_id"],
+            "execution_status": "succeeded",
+            "started_at_utc": started_at,
+            "finished_at_utc": _timestamp(),
+            "summary_path": str(run_dir / "summary.json"),
+            "run_dir": str(run_dir),
+        }
+        write_json(status_path, workflow_status)
+        return result
+    except Exception as exc:
+        _write_failure_outputs(run_record, str(exc))
+        workflow_status = {
+            "run_id": run_record["run_id"],
+            "execution_status": "failed",
+            "started_at_utc": started_at,
+            "finished_at_utc": _timestamp(),
+            "summary_path": str(run_dir / "summary.json"),
+            "run_dir": str(run_dir),
+            "error_message": str(exc),
+        }
+        write_json(status_path, workflow_status)
+        return workflow_status
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Execute one run from a validated qPCR batch manifest.")
-    parser.add_argument("--validated-manifest", required=True)
-    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--validated-manifest", required=False)
+    parser.add_argument("--run-id", required=False)
+    parser.add_argument("--run-record", required=False)
     args = parser.parse_args(argv)
-    execute_run(args.validated_manifest, args.run_id)
+    if args.run_record:
+        execute_run_record(args.run_record)
+    elif args.validated_manifest and args.run_id:
+        execute_run(args.validated_manifest, args.run_id)
+    else:
+        raise ValueError("Provide either --run-record or both --validated-manifest and --run-id.")
     return 0
 
 

@@ -130,6 +130,9 @@ def validate_manifest(
         )
 
     batch_id = output_root.name
+    rows_dir = output_root / "_workflow" / "run_rows"
+    for row in normalized_rows:
+        row["run_row_path"] = str((rows_dir / f"{row['run_id']}.json").resolve())
     return {
         "schema_version": "v0.1.0",
         "validation_status": "valid",
@@ -139,6 +142,7 @@ def validate_manifest(
         "artifact_profile": artifact_profile,
         "batch_id": batch_id,
         "output_root": str(output_root),
+        "rows_dir": str(rows_dir.resolve()),
         "run_count": len(normalized_rows),
         "manifest_columns": [column for column in header if column],
         "rows": normalized_rows,
@@ -168,6 +172,7 @@ def validate_manifest_report(
             "artifact_profile": artifact_profile,
             "batch_id": output_root.name,
             "output_root": str(output_root),
+            "rows_dir": str((output_root / "_workflow" / "run_rows").resolve()),
             "run_count": 0,
             "manifest_columns": [],
             "rows": [],
