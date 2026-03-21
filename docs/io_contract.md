@@ -38,10 +38,12 @@ Workflow-mode batch execution:
 Workflow behavior:
 
 1. validate the manifest before dispatch
-2. assign each row a stable run directory under `output_root/runs/<run_id>`
-3. execute the CLI once per manifest row
-4. preserve per-run summary artifacts even when a run fails
-5. aggregate batch-level handoff artifacts from compact machine-readable outputs
+2. write `output_root/_workflow/validated_manifest.json` with `validation_status=valid|invalid`
+3. stop before run dispatch if the validation artifact is invalid
+4. assign each row a stable run directory under `output_root/runs/<run_id>`
+5. execute the CLI once per manifest row
+6. preserve per-run summary artifacts even when a run fails
+7. aggregate batch-level handoff artifacts from compact machine-readable outputs
 
 Legacy sequential manifest mode:
 

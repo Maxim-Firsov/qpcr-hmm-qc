@@ -1,5 +1,3 @@
-import json
-
 from src.export.writers import write_csv, write_json
 from src.workflow.aggregate_batch import aggregate_batch
 
@@ -13,6 +11,8 @@ def test_aggregate_batch_builds_gate_outputs(tmp_path):
 
     validated_manifest = {
         "schema_version": "v0.1.0",
+        "validation_status": "valid",
+        "errors": [],
         "manifest_path": str(tmp_path / "manifest.tsv"),
         "manifest_sha256": "abc123",
         "artifact_profile": "review",
@@ -82,14 +82,10 @@ def test_aggregate_batch_builds_gate_outputs(tmp_path):
 
     policy = tmp_path / "policy.yaml"
     policy.write_text(
-        json.dumps(
-            {
-                "max_failed_runs_for_release": 0,
-                "max_rerun_wells_for_release": 0,
-                "max_review_wells_for_release": 0,
-                "max_review_runs_for_release": 0,
-            }
-        ),
+        "max_failed_runs_for_release: 0\n"
+        "max_rerun_wells_for_release: 0\n"
+        "max_review_wells_for_release: 0\n"
+        "max_review_runs_for_release: 0\n",
         encoding="utf-8",
     )
 

@@ -43,26 +43,18 @@ def test_snakemake_batch_generates_handoff_packet(tmp_path):
     )
     policy = tmp_path / "policy.yaml"
     policy.write_text(
-        json.dumps(
-            {
-                "max_failed_runs_for_release": 0,
-                "max_rerun_wells_for_release": 0,
-                "max_review_wells_for_release": 0,
-                "max_review_runs_for_release": 0,
-            }
-        ),
+        "max_failed_runs_for_release: 0\n"
+        "max_rerun_wells_for_release: 0\n"
+        "max_review_wells_for_release: 0\n"
+        "max_review_runs_for_release: 0\n",
         encoding="utf-8",
     )
     config = tmp_path / "batch_config.yaml"
     config.write_text(
-        json.dumps(
-            {
-                "manifest": str(manifest),
-                "output_root": str(tmp_path / "batch_outputs"),
-                "artifact_profile": "review",
-                "gate_config": str(policy),
-            }
-        ),
+        f"manifest: {manifest.as_posix()}\n"
+        f"output_root: {(tmp_path / 'batch_outputs').as_posix()}\n"
+        "artifact_profile: review\n"
+        f"gate_config: {policy.as_posix()}\n",
         encoding="utf-8",
     )
 
@@ -88,3 +80,36 @@ def test_snakemake_batch_generates_handoff_packet(tmp_path):
     assert review_record["artifact_inventory"]["well_calls.csv"]["generated"] is True
     assert (batch_out / "batch_report.md").exists()
     assert (batch_out / "failure_reason_counts.tsv").exists()
+
+
+def test_snakemake_invalid_manifest_writes_validation_artifact_and_stops(tmp_path):
+    repo_root = Path(__file__).resolve().parents[2]
+    manifest = tmp_path / "manifest.tsv"
+    manifest.write_text(
+        "run_id\tinput_mode\tinput_path\n"
+        "bad_run\tcurve_csv\tmissing.csv\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "batch_config.yaml"
+    config.write_text(
+        f"manifest: {manifest.as_posix()}\n"
+        f"output_root: {(tmp_path / 'batch_outputs').as_posix()}\n"
+        "artifact_profile: review\n",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "snakemake", "--snakefile", str(repo_root / "Snakefile"), "--cores", "1", "--configfile", str(config)],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    validated_manifest = tmp_path / "batch_outputs" / "_workflow" / "validated_manifest.json"
+    assert validated_manifest.exists()
+    payload = json.loads(validated_manifest.read_text(encoding="utf-8"))
+    assert payload["validation_status"] == "invalid"
+    assert payload["errors"]
+    assert not any((tmp_path / "batch_outputs" / "runs").glob("*"))

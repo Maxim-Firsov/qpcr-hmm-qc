@@ -132,6 +132,8 @@ def validate_manifest(
     batch_id = output_root.name
     return {
         "schema_version": "v0.1.0",
+        "validation_status": "valid",
+        "errors": [],
         "manifest_path": str(manifest_path),
         "manifest_sha256": _hash_file(manifest_path),
         "artifact_profile": artifact_profile,
@@ -147,6 +149,31 @@ def write_validated_manifest(payload: dict, outpath: str | Path) -> None:
     write_json(outpath, payload)
 
 
+def validate_manifest_report(
+    manifest_path: str | Path,
+    output_root: str | Path,
+    artifact_profile: str = "review",
+) -> dict:
+    manifest_path = Path(manifest_path).resolve()
+    output_root = Path(output_root).resolve()
+    try:
+        return validate_manifest(manifest_path, output_root, artifact_profile=artifact_profile)
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        return {
+            "schema_version": "v0.1.0",
+            "validation_status": "invalid",
+            "errors": [str(exc)],
+            "manifest_path": str(manifest_path),
+            "manifest_sha256": _hash_file(manifest_path) if manifest_path.exists() and manifest_path.is_file() else "",
+            "artifact_profile": artifact_profile,
+            "batch_id": output_root.name,
+            "output_root": str(output_root),
+            "run_count": 0,
+            "manifest_columns": [],
+            "rows": [],
+        }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate and normalize a qPCR batch manifest.")
     parser.add_argument("--manifest", required=True, help="Input TSV manifest path.")
@@ -155,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, help="Path for the normalized validated manifest JSON.")
     args = parser.parse_args(argv)
 
-    payload = validate_manifest(args.manifest, args.output_root, artifact_profile=args.artifact_profile)
+    payload = validate_manifest_report(args.manifest, args.output_root, artifact_profile=args.artifact_profile)
     write_validated_manifest(payload, args.out)
     return 0
 

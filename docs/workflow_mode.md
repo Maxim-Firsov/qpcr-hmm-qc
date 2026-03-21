@@ -49,6 +49,10 @@ Additional handoff artifacts:
 python -m snakemake --snakefile Snakefile --cores 1 --configfile workflow\config\batch_config.yaml
 ```
 
+The shipped workflow config files are regular YAML files and can be edited using normal YAML syntax such as `max_failed_runs_for_release: 1`.
+
 ## Manifest Notes
 
 Manifest rows are TSV records with stable `run_id` values. Each row maps to one stable run directory under `output_root/runs/<run_id>`, which is what gives the workflow resumability and selective reruns.
+
+Workflow preflight writes `output_root/_workflow/validated_manifest.json` first. If that artifact reports `validation_status=invalid`, the workflow stops before any per-run analysis starts, while still preserving the validation artifact for review.

@@ -23,6 +23,13 @@ def _hash_file(path: Path) -> str:
 
 def _normalized_json(path: Path) -> str:
     payload = json.loads(path.read_text(encoding="utf-8"))
+
+    if "artifact_inventory" in payload:
+        payload = dict(payload)
+        payload["artifact_inventory"] = {
+            name: {key: value for key, value in details.items() if key != "path"}
+            for name, details in payload["artifact_inventory"].items()
+        }
     if path.name == "run_metadata.json":
         payload = dict(payload)
         payload.pop("timing_seconds", None)

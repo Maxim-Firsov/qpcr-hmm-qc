@@ -103,6 +103,8 @@ def _write_failure_outputs(run_record: dict, message: str) -> None:
 
 def execute_run(validated_manifest_path: str | Path, run_id: str) -> dict:
     payload = _load_manifest(validated_manifest_path)
+    if payload.get("validation_status") != "valid":
+        raise ValueError("Validated manifest must have validation_status='valid' before run execution.")
     records = {row["run_id"]: row for row in payload["rows"]}
     if run_id not in records:
         raise ValueError(f"Run id {run_id!r} is not present in {validated_manifest_path}.")

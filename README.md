@@ -83,6 +83,8 @@ Run the bundled Snakemake batch demo:
 python -m snakemake --snakefile Snakefile --cores 1 --configfile workflow\config\batch_config.yaml
 ```
 
+The shipped workflow config files in `workflow\config\` use standard YAML syntax.
+
 Primary batch handoff artifacts:
 
 - `outputs/snakemake_demo_batch/batch_master.json`
@@ -163,6 +165,12 @@ Snakemake becomes necessary when the operating unit is a batch rather than a sin
 - batch-level release, review, and block decisions plus a final handoff packet for the lab or analyst queue
 
 That is the gap the workflow layer fills.
+
+Workflow preflight is also explicit:
+
+- `validate_manifest` writes `output_root\_workflow\validated_manifest.json`
+- `assert_manifest_valid` stops the workflow before run dispatch if that artifact reports `validation_status=invalid`
+- invalid manifests therefore leave a reviewable validation artifact behind instead of failing during Snakefile import
 
 ## Inputs
 

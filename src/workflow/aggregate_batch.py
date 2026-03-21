@@ -11,6 +11,7 @@ from pathlib import Path
 
 from src import __version__
 from src.export.writers import write_csv, write_json, write_tsv
+from src.workflow.config import load_mapping
 
 
 def _timestamp() -> str:
@@ -31,7 +32,9 @@ def _load_rerun_rows(path: Path) -> list[dict]:
 
 def aggregate_batch(validated_manifest_path: str | Path, config_path: str | Path | None = None) -> dict:
     manifest_payload = _load_json(validated_manifest_path)
-    config = _load_json(config_path) if config_path else {}
+    if manifest_payload.get("validation_status") != "valid":
+        raise ValueError("Validated manifest must have validation_status='valid' before batch aggregation.")
+    config = load_mapping(config_path)
     thresholds = {
         "max_failed_runs_for_release": int(config.get("max_failed_runs_for_release", 0)),
         "max_rerun_wells_for_release": int(config.get("max_rerun_wells_for_release", 0)),

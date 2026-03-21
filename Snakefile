@@ -1,19 +1,35 @@
 from pathlib import Path
-
-from src.workflow.manifest import validate_manifest
+import csv
 
 
 configfile: "workflow/config/batch_config.yaml"
 
 OUTPUT_ROOT = Path(config["output_root"]).resolve()
 VALIDATED_MANIFEST = OUTPUT_ROOT / "_workflow" / "validated_manifest.json"
-GATE_CONFIG = Path(config.get("gate_config", "workflow/config/batch_config.yaml")).resolve()
-MANIFEST_PAYLOAD = validate_manifest(
-    config["manifest"],
-    OUTPUT_ROOT,
-    artifact_profile=config.get("artifact_profile", "review"),
-)
-RUN_IDS = [row["run_id"] for row in MANIFEST_PAYLOAD["rows"]]
+MANIFEST_OK = OUTPUT_ROOT / "_workflow" / "manifest.ok"
+GATE_CONFIG = Path(config.get("gate_config", "workflow/config/batch_release_policy.yaml")).resolve()
+
+
+def _planned_run_ids(manifest_path):
+    manifest_file = Path(manifest_path)
+    if not manifest_file.is_absolute():
+        manifest_file = Path.cwd() / manifest_file
+    if not manifest_file.exists():
+        return []
+
+    run_ids = []
+    seen = set()
+    with manifest_file.open("r", encoding="utf-8", newline="") as handle:
+        for index, row in enumerate(csv.DictReader(handle, delimiter="\t"), start=1):
+            candidate = (row.get("run_id") or "").strip() or f"manifest_row_{index:03d}"
+            if candidate in seen:
+                candidate = f"{candidate}__row_{index:03d}"
+            seen.add(candidate)
+            run_ids.append(candidate)
+    return run_ids
+
+
+RUN_IDS = _planned_run_ids(config["manifest"])
 
 
 rule all:
@@ -38,9 +54,19 @@ rule validate_manifest:
         "--artifact-profile {params.artifact_profile} --out \"{output}\""
 
 
+rule assert_manifest_valid:
+    input:
+        validated_manifest=str(VALIDATED_MANIFEST),
+    output:
+        str(MANIFEST_OK),
+    shell:
+        "python -m src.workflow.assert_manifest_valid --validated-manifest \"{input.validated_manifest}\" --out \"{output}\""
+
+
 rule run_manifest_row:
     input:
         validated_manifest=str(VALIDATED_MANIFEST),
+        manifest_ok=str(MANIFEST_OK),
     output:
         summary=str(OUTPUT_ROOT / "runs/{run_id}/summary.json"),
         workflow_status=str(OUTPUT_ROOT / "runs/{run_id}/workflow_status.json"),
@@ -53,6 +79,7 @@ rule run_manifest_row:
 rule aggregate_batch:
     input:
         validated_manifest=str(VALIDATED_MANIFEST),
+        manifest_ok=str(MANIFEST_OK),
         summaries=expand(str(OUTPUT_ROOT / "runs/{run_id}/summary.json"), run_id=RUN_IDS),
         workflow_statuses=expand(str(OUTPUT_ROOT / "runs/{run_id}/workflow_status.json"), run_id=RUN_IDS),
     output:
