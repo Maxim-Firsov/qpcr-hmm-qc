@@ -39,7 +39,7 @@ def _hash_file(path: Path) -> str:
 
 
 def _read_manifest_rows(manifest_path: Path) -> list[dict]:
-    with manifest_path.open("r", encoding="utf-8", newline="") as handle:
+    with manifest_path.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle, delimiter="\t"))
 
 

@@ -44,7 +44,7 @@ def _parse_simple_yaml(text: str) -> dict:
 def load_mapping(path: str | Path | None) -> dict:
     if not path:
         return {}
-    text = Path(path).read_text(encoding="utf-8")
+    text = Path(path).read_text(encoding="utf-8-sig")
     stripped = text.strip()
     if not stripped:
         return {}

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from src.workflow.planning import planned_run_ids
 
 configfile: "workflow/config/batch_config.yaml"
 
@@ -10,30 +11,7 @@ RUN_ROWS_DIR = WORKFLOW_ROOT / "run_rows"
 MANIFEST_OK = WORKFLOW_ROOT / "manifest.ok"
 GATE_CONFIG = Path(config.get("gate_config", "workflow/config/batch_release_policy.yaml")).resolve()
 
-
-def _planned_run_ids(manifest_path):
-    manifest_file = Path(manifest_path)
-    if not manifest_file.is_absolute():
-        manifest_file = Path.cwd() / manifest_file
-    if not manifest_file.exists():
-        return []
-
-    run_ids = []
-    seen = set()
-    with manifest_file.open("r", encoding="utf-8", errors="replace") as handle:
-        lines = handle.read().splitlines()
-    for index, line in enumerate(lines[1:], start=1):
-        if not line.strip():
-            continue
-        candidate = (line.split("\t", 1)[0] or "").strip() or f"manifest_row_{index:03d}"
-        if candidate in seen:
-            candidate = f"{candidate}__row_{index:03d}"
-        seen.add(candidate)
-        run_ids.append(candidate)
-    return run_ids
-
-
-RUN_IDS = _planned_run_ids(config["manifest"])
+RUN_IDS = planned_run_ids(config["manifest"])
 
 
 rule all:
